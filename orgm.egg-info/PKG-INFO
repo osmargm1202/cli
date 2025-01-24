@@ -1,0 +1,62 @@
+Metadata-Version: 2.2
+Name: orgm
+Version: 0.1
+Summary: ORGM CLI
+Author: Osmar Garcia
+License: Apache-2.0
+Project-URL: Homepage, https://github.com/osmargm1202/orgm
+Project-URL: Changelog, https://github.com/osmargm1202/orgm/releases
+Project-URL: Issues, https://github.com/osmargm1202/orgm/issues
+Project-URL: CI, https://github.com/osmargm1202/orgm/actions
+Classifier: License :: OSI Approved :: Apache Software License
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: click
+Requires-Dist: colorama>=0.4.6
+Requires-Dist: python-dotenv>=1.0.1
+Requires-Dist: requests>=2.32.3
+Provides-Extra: test
+Requires-Dist: pytest; extra == "test"
+
+# orgm
+
+[![PyPI](https://img.shields.io/pypi/v/orgm.svg)](https://pypi.org/project/orgm/)
+[![Changelog](https://img.shields.io/github/v/release/osmargm1202/orgm?include_prereleases&label=changelog)](https://github.com/osmargm1202/orgm/releases)
+[![Tests](https://github.com/osmargm1202/orgm/actions/workflows/test.yml/badge.svg)](https://github.com/osmargm1202/orgm/actions/workflows/test.yml)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](https://github.com/osmargm1202/orgm/blob/master/LICENSE)
+
+ORGM CLI
+
+## Installation
+
+Install this tool using `pip`:
+```bash
+pip install orgm
+```
+## Usage
+
+For help, run:
+```bash
+orgm --help
+```
+You can also use:
+```bash
+python -m orgm --help
+```
+## Development
+
+To contribute to this tool, first checkout the code. Then create a new virtual environment:
+```bash
+cd orgm
+python -m venv venv
+source venv/bin/activate
+```
+Now install the dependencies and test dependencies:
+```bash
+pip install -e '.[test]'
+```
+To run the tests:
+```bash
+python -m pytest
+```

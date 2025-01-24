@@ -1,0 +1,14 @@
+# production
+/build
+/dist
+/__pycache__
+
+# misc
+*.pem
+*.pyc
+*.cpython*
+
+# local env files
+.venv*.local
+
+.venv*
