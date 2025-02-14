@@ -4,18 +4,14 @@ Version: 0.1
 Summary: ORGM CLI
 Author: Osmar Garcia
 License: Apache-2.0
-Project-URL: Homepage, https://github.com/osmargm1202/orgm
-Project-URL: Changelog, https://github.com/osmargm1202/orgm/releases
-Project-URL: Issues, https://github.com/osmargm1202/orgm/issues
-Project-URL: CI, https://github.com/osmargm1202/orgm/actions
 Classifier: License :: OSI Approved :: Apache Software License
 Requires-Python: >=3.8
 Description-Content-Type: text/markdown
 License-File: LICENSE
 Requires-Dist: click
-Requires-Dist: colorama>=0.4.6
 Requires-Dist: python-dotenv>=1.0.1
 Requires-Dist: requests>=2.32.3
+Requires-Dist: rich>=13.9.4
 Provides-Extra: test
 Requires-Dist: pytest; extra == "test"
 

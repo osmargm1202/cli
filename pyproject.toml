@@ -11,20 +11,15 @@ classifiers = [
 ]
 dependencies = [
     "click",
-    "colorama>=0.4.6",
     "python-dotenv>=1.0.1",
     "requests>=2.32.3",
+    "rich>=13.9.4",
 ]
 
 [build-system]
 requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
-[project.urls]
-Homepage = "https://github.com/osmargm1202/orgm"
-Changelog = "https://github.com/osmargm1202/orgm/releases"
-Issues = "https://github.com/osmargm1202/orgm/issues"
-CI = "https://github.com/osmargm1202/orgm/actions"
 
 [project.scripts]
 orgm = "orgm.cli:cli"
