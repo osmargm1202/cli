@@ -1,7 +1,5 @@
 import json
 import requests
-import colorama
-from colorama import Fore
 import click
 from dotenv import load_dotenv
 
@@ -14,7 +12,6 @@ load_dotenv(override=True)
 
 # url = os.getenv("URL")
 url = os.getenv("URL2")
-colorama.init(autoreset=True)
 
 
 def get_token():
@@ -24,8 +21,7 @@ def get_token():
             token = token_data.get("access_token")
         return token
     except FileNotFoundError:
-        click.echo(
-            Fore.RED + "Error: Debe autenticarse primero usando el comando 'auth'."
+        click.echo("Error: Debe autenticarse primero usando el comando 'auth'."
         )
         return
 
@@ -48,16 +44,15 @@ def cambiar_clave():
             )
 
             if response.status_code == 200:
-                click.echo(Fore.GREEN + "Contraseña cambiada exitosamente.")
+                click.echo("Contraseña cambiada exitosamente.")
             else:
                 click.echo(
-                    Fore.RED
-                    + f"Error al cambiar la contraseña: {response.status_code} - {response.text}"
+                    f"Error al cambiar la contraseña: {response.status_code} - {response.text}"
                 )
         else:
-            click.echo(Fore.RED + "Error: No se encontró un token de acceso.")
+            click.echo("Error: No se encontró un token de acceso.")
     except requests.RequestException as e:
-        click.echo(Fore.RED + f"Error al conectar con el servidor: {e}")
+        click.echo(f"Error al conectar con el servidor: {e}")
 
 
 @click.command()
@@ -96,18 +91,17 @@ def login(correo, password):
             if token:
                 with open("orgm/cache/token.json", "w") as f:
                     json.dump({"access_token": token}, f)
-                click.echo(Fore.GREEN + "Autenticación exitosa. Token guardado.")
+                click.echo("Autenticación exitosa. Token guardado.")
                 if conteo == 0:
-                    click.echo(Fore.YELLOW + "Ingresaste por primera vez.")
+                    click.echo("Ingresaste por primera vez.")
                     cambiar_clave()
 
             else:
-                click.echo(Fore.RED + "Error: No se recibió un token.")
+                click.echo("Error: No se recibió un token.")
         else:
             click.echo(
-                Fore.RED
-                + f"Error de autenticación: {response.status_code} - {response.text}"
+                f"Error de autenticación: {response.status_code} - {response.text}"
             )
 
     except requests.RequestException as e:
-        click.echo(Fore.RED + f"Error al conectar con el servidor: {e}")
+        click.echo(f"Error al conectar con el servidor: {e}")
