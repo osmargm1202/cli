@@ -1,6 +1,6 @@
 [project]
 name = "orgm"
-version = "0.1"
+version = "0.11"
 description = "ORGM CLI"
 readme = "README.md"
 authors = [{name = "Osmar Garcia"}]
