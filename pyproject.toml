@@ -11,6 +11,8 @@ classifiers = [
 ]
 dependencies = [
     "click",
+    "kivy>=2.3.1",
+    "plyer>=2.1.0",
     "python-dotenv>=1.0.1",
     "questionary>=2.1.0",
     "requests>=2.32.3",
@@ -35,7 +37,7 @@ test = ["pytest"]
 include-package-data = true
 
 [tool.setuptools.package-data]
-orgm = ["*.md", "*.json", "*.txt", "*.html", "*.example", "*.css", "*.js", "data/*", "stuff/*", "adm/*", "questionary/*"]
+orgm = ["*.md", "*.json", "*.txt", "*.html", "*.example", "*.css", "*.js", "data/*", "stuff/*", "adm/*", "questionary/*", "apps/*"]
 
 [tool.setuptools.package-dir]
 "" = "."

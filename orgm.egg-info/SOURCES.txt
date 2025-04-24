@@ -3,6 +3,7 @@ MANIFEST.in
 README.md
 pyproject.toml
 setup.py
+./orgm/.env.example
 ./orgm/__init__.py
 ./orgm/__main__.py
 ./orgm/cli.py
@@ -10,11 +11,13 @@ setup.py
 ./orgm/adm/__init__.py
 ./orgm/adm/clientes.py
 ./orgm/adm/db.py
+./orgm/adm/firma.py
 ./orgm/questionary/__init__.py
 ./orgm/questionary/clientes.py
 ./orgm/stuff/__init__.py
 ./orgm/stuff/logman.py
 ./orgm/stuff/variables.py
+orgm/.env.example
 orgm/__init__.py
 orgm/__main__.py
 orgm/cli.py
@@ -28,6 +31,7 @@ orgm.egg-info/top_level.txt
 orgm/adm/__init__.py
 orgm/adm/clientes.py
 orgm/adm/db.py
+orgm/adm/firma.py
 orgm/data/logs/log.txt
 orgm/questionary/__init__.py
 orgm/questionary/clientes.py

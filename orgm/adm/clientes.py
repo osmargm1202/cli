@@ -16,12 +16,27 @@ POSTGREST_URL = os.getenv("POSTGREST_URL")
 if not POSTGREST_URL:
     console.print("[bold red]Error: POSTGREST_URL no está definida en las variables de entorno[/bold red]")
 
+console.print(f"POSTGREST_URL: {POSTGREST_URL}")
+
+# Obtener credenciales de Cloudflare Access
+CF_ACCESS_CLIENT_ID = os.getenv("CF_ACCESS_CLIENT_ID")
+CF_ACCESS_CLIENT_SECRET = os.getenv("CF_ACCESS_CLIENT_SECRET")
+
+if not all([CF_ACCESS_CLIENT_ID, CF_ACCESS_CLIENT_SECRET]):
+    console.print("[bold yellow]Advertencia: CF_ACCESS_CLIENT_ID o CF_ACCESS_CLIENT_SECRET no están definidas en las variables de entorno.[/bold yellow]")
+    console.print("[bold yellow]Las consultas no incluirán autenticación de Cloudflare Access.[/bold yellow]")
+
 # Configuración de los headers para PostgREST
 headers = {
     "Content-Type": "application/json",
     "Accept": "application/json",
     "Prefer": "return=representation"
 }
+
+# Agregar headers de Cloudflare Access si están disponibles
+if CF_ACCESS_CLIENT_ID and CF_ACCESS_CLIENT_SECRET:
+    headers["CF-Access-Client-Id"] = CF_ACCESS_CLIENT_ID
+    headers["CF-Access-Client-Secret"] = CF_ACCESS_CLIENT_SECRET
 
 def obtener_clientes() -> List[Cliente]:
     """Obtiene todos los clientes desde PostgREST"""

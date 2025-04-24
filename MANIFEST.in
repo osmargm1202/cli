@@ -1,9 +1,10 @@
 include orgm/*.md
 include orgm/*.json
 include orgm/*.txt
+include orgm/*.example
 include orgm/data/*
 include orgm/stuff/*
 include orgm/adm/*
 include orgm/questionary/*
-include orgm/*.example
+include orgm/apps/*
 recursive-include orgm *.md *.json *.txt *.html *.css *.js *.csv *.yaml *.yml *.example

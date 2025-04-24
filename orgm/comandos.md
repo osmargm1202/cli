@@ -1,5 +1,5 @@
 [bold green]
-ORGM CLI: Herramienta integral de gestión y utilidades integradas v0.1
+ORGM CLI: Herramienta integral de gestión y utilidades integradas
 [/bold green]
 
 Administra clientes, proyectos, cotizaciones, cuentas, documentos contables, realiza cálculos eléctricos y automatiza tu flujo de trabajo con Docker.
@@ -11,6 +11,7 @@ Algunos comandos principales:
 [blue]calculos[/blue] Utilidades de ingeniería eléctrica.
 [blue]docker[/blue] Facilita tareas de contenedores Docker.
 [blue]env[/blue] Facilita carga de variables de ambiente.
+[blue]pdf[/blue] Operaciones con archivos PDF (firma digital).
 
 Para ayuda: [blue]orgm [[red]comando[/red]] --help[/blue]
 
@@ -20,3 +21,7 @@ Para ayuda: [blue]orgm [[red]comando[/red]] --help[/blue]
 [blue]orgm clientes ver [red]ID[/red][/blue] - Muestra detalles de un cliente específico y ofrece editarlo.
 [blue]orgm clientes editar [red]ID[/red][/blue] - Edita directamente un cliente existente.
 [blue]orgm clientes buscar[/blue] - Busca clientes por nombre, nombre comercial o número de forma interactiva.
+
+[bold yellow]COMANDOS DE GESTIÓN DE PDF[/bold yellow]
+[blue]orgm pdf firmar-ruta-archivo [red]ARCHIVO_PDF[/red] --x [red]X[/red] --y [red]Y[/red] --ancho [red]ANCHO[/red] [--salida [red]ARCHIVO_SALIDA[/red]][/blue] - Firma digitalmente un PDF usando el servicio protegido con Cloudflare Access.
+[blue]orgm pdf firmar [--x [red]X[/red]] [--y [red]Y[/red]] [--ancho [red]ANCHO[/red]][/blue] - Abre un selector de archivos para elegir un PDF y firmarlo automáticamente. El archivo firmado se guarda en la misma carpeta con el sufijo "\_signed".

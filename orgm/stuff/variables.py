@@ -9,6 +9,7 @@ from rich.console import Console
 console = Console()
 
 class EnvEditor(App):
+    """Editor de variables de entorno"""
     CSS = """
     #editor {
         height: 1fr;
@@ -54,6 +55,9 @@ class EnvEditor(App):
         content = ""
         env_example_path = os.path.join(os.path.dirname(self.env_file_path), ".env.example")
         orgm_env_example_path = os.path.join(os.getcwd(), "orgm", ".env.example")
+
+        console.print(f"Intentando cargar desde: {self.env_file_path}")
+        console.print(f"Intentando cargar desde: {orgm_env_example_path}")
         
         # 1. Intentar cargar desde .env si existe
         if os.path.exists(self.env_file_path):
