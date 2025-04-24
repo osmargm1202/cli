@@ -1,7 +1,10 @@
 click
 python-dotenv>=1.0.1
+questionary>=2.1.0
 requests>=2.32.3
 rich>=13.9.4
+sqlmodel>=0.0.24
+textual>=0.73.0
 
 [test]
 pytest

@@ -1,4 +1,4 @@
-Metadata-Version: 2.2
+Metadata-Version: 2.4
 Name: orgm
 Version: 0.1
 Summary: ORGM CLI
@@ -10,49 +10,13 @@ Description-Content-Type: text/markdown
 License-File: LICENSE
 Requires-Dist: click
 Requires-Dist: python-dotenv>=1.0.1
+Requires-Dist: questionary>=2.1.0
 Requires-Dist: requests>=2.32.3
 Requires-Dist: rich>=13.9.4
+Requires-Dist: sqlmodel>=0.0.24
+Requires-Dist: textual>=0.73.0
 Provides-Extra: test
 Requires-Dist: pytest; extra == "test"
+Dynamic: license-file
 
-# orgm
-
-[![PyPI](https://img.shields.io/pypi/v/orgm.svg)](https://pypi.org/project/orgm/)
-[![Changelog](https://img.shields.io/github/v/release/osmargm1202/orgm?include_prereleases&label=changelog)](https://github.com/osmargm1202/orgm/releases)
-[![Tests](https://github.com/osmargm1202/orgm/actions/workflows/test.yml/badge.svg)](https://github.com/osmargm1202/orgm/actions/workflows/test.yml)
-[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](https://github.com/osmargm1202/orgm/blob/master/LICENSE)
-
-ORGM CLI
-
-## Installation
-
-Install this tool using `pip`:
-```bash
-pip install orgm
-```
-## Usage
-
-For help, run:
-```bash
-orgm --help
-```
-You can also use:
-```bash
-python -m orgm --help
-```
-## Development
-
-To contribute to this tool, first checkout the code. Then create a new virtual environment:
-```bash
-cd orgm
-python -m venv venv
-source venv/bin/activate
-```
-Now install the dependencies and test dependencies:
-```bash
-pip install -e '.[test]'
-```
-To run the tests:
-```bash
-python -m pytest
-```
+curl -sSL https://github.com/osmargm1202/cli.git | uv tool install "git+https://github.com/osmargm1202/cli.git"

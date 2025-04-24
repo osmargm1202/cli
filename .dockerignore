@@ -8,7 +8,10 @@ wheels/
 
 # Virtual environments
 .venv
-.env
+
 log.txt
 
 *.tar
+
+.gitignore
+

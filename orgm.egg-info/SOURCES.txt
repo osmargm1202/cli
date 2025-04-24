@@ -10,5 +10,10 @@ orgm.egg-info/dependency_links.txt
 orgm.egg-info/entry_points.txt
 orgm.egg-info/requires.txt
 orgm.egg-info/top_level.txt
-orgm/server/auth.py
-tests/test_orgm.py
+orgm/adm/__init__.py
+orgm/adm/clientes.py
+orgm/adm/db.py
+orgm/stuff/__init__.py
+orgm/stuff/logman.py
+orgm/stuff/variables.py
+orgm/textual/clientes.py
