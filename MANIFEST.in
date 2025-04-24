@@ -5,4 +5,5 @@ include orgm/data/*
 include orgm/stuff/*
 include orgm/adm/*
 include orgm/questionary/*
-recursive-include orgm *.md *.json *.txt *.html *.css *.js *.csv *.yaml *.yml 
+include orgm/*.example
+recursive-include orgm *.md *.json *.txt *.html *.css *.js *.csv *.yaml *.yml *.example

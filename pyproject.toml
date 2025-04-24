@@ -35,7 +35,7 @@ test = ["pytest"]
 include-package-data = true
 
 [tool.setuptools.package-data]
-orgm = ["*.md", "*.json", "*.txt", "*.html", "*.css", "*.js", "data/*", "stuff/*", "adm/*", "questionary/*"]
+orgm = ["*.md", "*.json", "*.txt", "*.html", "*.example", "*.css", "*.js", "data/*", "stuff/*", "adm/*", "questionary/*"]
 
 [tool.setuptools.package-dir]
 "" = "."
