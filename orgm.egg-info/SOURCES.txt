@@ -13,7 +13,8 @@ orgm.egg-info/top_level.txt
 orgm/adm/__init__.py
 orgm/adm/clientes.py
 orgm/adm/db.py
+orgm/questionary/__init__.py
+orgm/questionary/clientes.py
 orgm/stuff/__init__.py
 orgm/stuff/logman.py
 orgm/stuff/variables.py
-orgm/textual/clientes.py

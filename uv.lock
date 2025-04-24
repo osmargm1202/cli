@@ -358,7 +358,7 @@ wheels = [
 
 [[package]]
 name = "orgm"
-version = "0.1"
+version = "0.11"
 source = { editable = "." }
 dependencies = [
     { name = "click" },

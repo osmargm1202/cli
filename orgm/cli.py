@@ -22,6 +22,7 @@ token = None
 def print_comandos():
     # Get the directory where the script is located
     script_dir = os.path.dirname(os.path.abspath(__file__))
+    print(script_dir)
     # Build path relative to script location
     comandos_path = os.path.join(script_dir, "comandos.md")
     with open(comandos_path, "r") as f:
@@ -64,6 +65,7 @@ def update():
                 "uv",
                 "tool",
                 "install",
+                "--force",
                 f"git+{os.getenv('GIT_URL')}",
             ]
         )
