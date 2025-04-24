@@ -26,7 +26,7 @@ def print_comandos():
     print(script_dir)
     # Build path relative to script location
     comandos_path = os.path.join(script_dir, "comandos.md")
-    with open(comandos_path, "r") as f:
+    with open(comandos_path, "r", encoding="utf-8") as f:
         comandos = f.read()
     console.print(comandos)
 
@@ -61,16 +61,20 @@ def update():
     console.print("Actualizando paquete de ORGM CLI")
 
     try:
+        # Obtener la rama específica del entorno si está configurada
+        branch = os.getenv('GIT_BRANCH', 'master')  # Default a 'main' si no está especificada
+        git_url = f"{os.getenv('GIT_URL')}@{branch}"
+        
         subprocess.check_call(
             [
                 "uv",
-                "tool",
+                "tool", 
                 "install",
                 "--force",
-                f"git+{os.getenv('GIT_URL')}",
+                f"git+{git_url}",
             ]
         )
-        console.print("Paquete instalado correctamente.")
+        console.print(f"Paquete instalado correctamente desde la rama {branch}.")
     except subprocess.CalledProcessError as e:
         console.print(f"Error al instalar el paquete: {e}")
 
