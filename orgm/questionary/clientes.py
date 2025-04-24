@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import questionary
 from rich.console import Console
 from rich.table import Table
