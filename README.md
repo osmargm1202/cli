@@ -1,1 +1,5 @@
+'''
+
 curl -sSL https://github.com/osmargm1202/cli.git | uv tool install "git+https://github.com/osmargm1202/cli.git"
+
+'''
