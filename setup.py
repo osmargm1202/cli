@@ -1,17 +1,25 @@
 # -*- coding: utf-8 -*-
-import os
 from setuptools import setup, find_packages
 
 setup(
     packages=find_packages(),
     package_data={
-        'orgm': ['*.md', '*.json', '*.txt', 'data/*', 'stuff/*', 'adm/*', 'questionary/*', 'cli/*'],
+        "orgm": [
+            "*.md",
+            "*.json",
+            "*.txt",
+            "data/*",
+            "stuff/*",
+            "adm/*",
+            "questionary/*",
+            "cli/*",
+        ],
     },
     include_package_data=True,
     scripts=["orgm/cli.py"],
     entry_points={
-        'console_scripts': [
-            'orgm=orgm.cli:cli',
+        "console_scripts": [
+            "orgm=orgm.cli:cli",
         ],
     },
     description="CLI de ORGM",

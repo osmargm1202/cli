@@ -23,25 +23,24 @@ CF_ACCESS_CLIENT_SECRET = os.getenv("CF_ACCESS_CLIENT_SECRET")
 
 
 if not all([FIRMA_URL, CF_ACCESS_CLIENT_ID, CF_ACCESS_CLIENT_SECRET]):
-    print("[bold red]Error: Se requieren las variables de entorno CF_DOMAIN, CF_ACCESS_CLIENT_ID y CF_ACCESS_CLIENT_SECRET[/bold red]")
+    print(
+        "[bold red]Error: Se requieren las variables de entorno CF_DOMAIN, CF_ACCESS_CLIENT_ID y CF_ACCESS_CLIENT_SECRET[/bold red]"
+    )
+
 
 def firmar_pdf(
-    archivo_pdf: str, 
-    x1: int, 
-    y1: int, 
-    ancho: int, 
-    archivo_salida: Optional[str] = None
+    archivo_pdf: str, x1: int, y1: int, ancho: int, archivo_salida: Optional[str] = None
 ) -> Optional[str]:
     """
     Firma un archivo PDF usando el servicio protegido con Cloudflare Access.
-    
+
     Args:
         archivo_pdf: Ruta al archivo PDF a firmar
         x1: Posición X donde colocar la firma
         y1: Posición Y donde colocar la firma
         ancho: Ancho de la firma
         archivo_salida: Nombre del archivo de salida (opcional)
-        
+
     Returns:
         Ruta al archivo PDF firmado o None si ocurre un error
     """
@@ -51,63 +50,55 @@ def firmar_pdf(
         if not pdf_path.exists():
             print(f"[bold red]Error: El archivo {archivo_pdf} no existe[/bold red]")
             return None
-            
+
         # Si no se especifica archivo de salida, usar el nombre del original con prefijo
         if not archivo_salida:
             archivo_salida = f"firmado_{pdf_path.name}"
-            
+
         # URL del servicio de firma
         url = f"{FIRMA_URL}/firmar-pdf/"
-        
+
         # Headers con autenticación de Cloudflare Access
         headers = {
             "accept": "application/pdf",
             "CF-Access-Client-Id": CF_ACCESS_CLIENT_ID,
-            "CF-Access-Client-Secret": CF_ACCESS_CLIENT_SECRET
+            "CF-Access-Client-Secret": CF_ACCESS_CLIENT_SECRET,
         }
-        
+
         # Datos del formulario
-        files = {
-            "file": (pdf_path.name, open(pdf_path, "rb"), "application/pdf")
-        }
-        data = {
-            "x1": str(x1),
-            "y1": str(y1),
-            "ancho": str(ancho)
-        }
-        
+        files = {"file": (pdf_path.name, open(pdf_path, "rb"), "application/pdf")}
+        data = {"x1": str(x1), "y1": str(y1), "ancho": str(ancho)}
+
         # Realizar la petición
-        response = requests.post(
-            url,
-            headers=headers,
-            files=files,
-            data=data
-        )
-        
+        response = requests.post(url, headers=headers, files=files, data=data)
+
         # Verificar respuesta
         response.raise_for_status()
-        
+
         # Guardar el archivo PDF firmado
         with open(archivo_salida, "wb") as f:
             f.write(response.content)
-            
-        print(f"[bold green]PDF firmado correctamente, guardado como {archivo_salida}[/bold green]")
+
+        print(
+            f"[bold green]PDF firmado correctamente, guardado como {archivo_salida}[/bold green]"
+        )
         return archivo_salida
-    
+
     except Exception as e:
         print(f"[bold red]Error al firmar PDF: {e}[/bold red]")
-        return None 
+        return None
+
 
 def seleccionar_y_firmar_pdf(x1: int = 100, y1: int = 100, ancho: int = 200):
     """
     Abre un diálogo para seleccionar un archivo PDF, lo firma y guarda
     el resultado en la misma carpeta con el sufijo "signed".
-    
+
     Args:
         x1: Posición X donde colocar la firma (default: 100)
         y1: Posición Y donde colocar la firma (default: 100)
         ancho: Ancho de la firma (default: 200)
-        
+
     Returns:
         Ruta al archivo PDF firmado o None si ocurre un error
     """
@@ -116,13 +107,10 @@ def seleccionar_y_firmar_pdf(x1: int = 100, y1: int = 100, ancho: int = 200):
         from kivy.app import App
         from kivy.lang import Builder
         from kivy.uix.boxlayout import BoxLayout
-        from kivy.uix.button import Button
-        from kivy.uix.label import Label
-        from kivy.uix.filechooser import FileChooserListView
-        from kivy.properties import ObjectProperty
-        
+
+
         # Definir la interfaz con Kivy Language
-        kv_string = '''
+        kv_string = """
 <FileChooserScreen>:
     orientation: 'vertical'
     spacing: 10
@@ -151,60 +139,65 @@ def seleccionar_y_firmar_pdf(x1: int = 100, y1: int = 100, ancho: int = 200):
         Button:
             text: 'Seleccionar'
             on_release: app.select(file_chooser.selection)
-'''
-        
+"""
+
         # Crear clase para la pantalla de selección
         class FileChooserScreen(BoxLayout):
             pass
-        
+
         # Aplicación Kivy
         class PDFChooserApp(App):
             def __init__(self, **kwargs):
                 super(PDFChooserApp, self).__init__(**kwargs)
                 self.selected_file = None
                 Builder.load_string(kv_string)
-            
+
             def build(self):
                 return FileChooserScreen()
-            
+
             def get_start_dir(self):
                 # Iniciar en el directorio de inicio del usuario
-                return os.path.expanduser('~')
-            
+                return os.path.expanduser("~")
+
             def select(self, selection):
                 if selection and len(selection) > 0:
                     self.selected_file = selection[0]
                 self.stop()
-            
+
             def cancel(self):
                 self.selected_file = None
                 self.stop()
-        
+
         # Crear y ejecutar la aplicación
         app = PDFChooserApp(title="Seleccionar PDF")
         app.run()
-        
+
         # Obtener el archivo seleccionado
         archivo_pdf = app.selected_file
-        
+
         if not archivo_pdf:
-            print("[yellow]Operación cancelada: No se seleccionó ningún archivo[/yellow]")
+            print(
+                "[yellow]Operación cancelada: No se seleccionó ningún archivo[/yellow]"
+            )
             return None
-        
+
         # Crear el nombre del archivo de salida con sufijo "signed"
         pdf_path = Path(archivo_pdf)
         nombre_base = pdf_path.stem  # Obtiene el nombre sin extensión
         archivo_salida = pdf_path.parent / f"{nombre_base}_signed{pdf_path.suffix}"
-        
+
         # Llamar a la función de firma
         return firmar_pdf(archivo_pdf, x1, y1, ancho, str(archivo_salida))
-    
+
     except ImportError:
-        print("[bold red]Error: Se requiere el paquete kivy. Instale con pip install kivy[/bold red]")
+        print(
+            "[bold red]Error: Se requiere el paquete kivy. Instale con pip install kivy[/bold red]"
+        )
         return None
     except Exception as e:
         print(f"[bold red]Error al seleccionar o firmar PDF: {e}[/bold red]")
         return None
 
+
 if __name__ == "__main__":
-    seleccionar_y_firmar_pdf() 
+    seleccionar_y_firmar_pdf()

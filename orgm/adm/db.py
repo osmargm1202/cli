@@ -293,11 +293,13 @@ class PartidaPresupuesto:
         self.datos = []
         try:
             precio = "{:,.2f}".format(self.precio)
-        except:
+        except Exception as e:
+            print(f"Error al formatear el precio: {e}")
             precio = self.precio
         try:
             total = "{:,.2f}".format(self.total)
-        except:
+        except Exception as e:
+            print(f"Error al formatear el total: {e}")
             total = self.total
         self.datos.append(
             [

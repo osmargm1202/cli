@@ -3,7 +3,6 @@ MANIFEST.in
 README.md
 pyproject.toml
 setup.py
-./orgm/.env.example
 ./orgm/__init__.py
 ./orgm/__main__.py
 ./orgm/cli.py

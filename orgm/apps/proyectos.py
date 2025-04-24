@@ -1,0 +1,382 @@
+import click
+import questionary
+from typing import Dict, Optional
+from rich.console import Console
+from rich.table import Table
+from rich import print
+from orgm.adm.proyectos import (
+    obtener_proyectos,
+    obtener_proyecto,
+    crear_proyecto,
+    actualizar_proyecto,
+    eliminar_proyecto,
+    buscar_proyectos,
+    obtener_ubicaciones,
+    buscar_ubicaciones,
+)
+
+console = Console()
+
+
+def mostrar_proyectos(proyectos):
+    """Muestra una tabla con los proyectos"""
+    if not proyectos:
+        print("[yellow]No se encontraron proyectos[/yellow]")
+        return
+
+    table = Table(title="Proyectos")
+    table.add_column("ID", justify="right", style="cyan")
+    table.add_column("Nombre", style="green")
+    table.add_column("Ubicación", style="yellow")
+    table.add_column("Descripción", style="white")
+
+    for p in proyectos:
+        # Limitar la longitud de la descripción para una mejor visualización
+        descripcion = (
+            p.descripcion[:100] + "..." if len(p.descripcion) > 100 else p.descripcion
+        )
+        table.add_row(str(p.id), p.nombre_proyecto, p.ubicacion, descripcion)
+
+    console.print(table)
+
+
+def seleccionar_ubicacion() -> Optional[str]:
+    """Permite al usuario buscar y seleccionar una ubicación"""
+    # Primera pregunta: ¿cómo quiere buscar la ubicación?
+    metodo_busqueda = questionary.select(
+        "¿Cómo desea seleccionar la ubicación?",
+        choices=["Buscar por nombre", "Ver todas las ubicaciones", "Cancelar"],
+    ).ask()
+
+    if metodo_busqueda == "Cancelar":
+        return None
+
+    ubicaciones = []
+    if metodo_busqueda == "Buscar por nombre":
+        termino = questionary.text(
+            "Ingrese término de búsqueda (provincia, distrito o municipio):"
+        ).ask()
+        if not termino:
+            print("[yellow]Búsqueda cancelada[/yellow]")
+            return None
+
+        ubicaciones = buscar_ubicaciones(termino)
+    else:
+        ubicaciones = obtener_ubicaciones()
+
+    if not ubicaciones:
+        print("[yellow]No se encontraron ubicaciones[/yellow]")
+        return None
+
+    # Crear las opciones para el selector
+    opciones = [
+        f"{u.id}: {u.provincia}, {u.distrito}, {u.distritomunicipal}"
+        for u in ubicaciones
+    ]
+    opciones.append("Cancelar")
+
+    seleccion = questionary.select("Seleccione una ubicación:", choices=opciones).ask()
+
+    if seleccion == "Cancelar":
+        return None
+
+    # Extraer el ID seleccionado
+    id_ubicacion = seleccion.split(":")[0].strip()
+    ubicacion = next((u for u in ubicaciones if str(u.id) == id_ubicacion), None)
+
+    if not ubicacion:
+        return None
+
+    # Devolver una cadena formateada con la ubicación
+    return f"{ubicacion.provincia}, {ubicacion.distrito}, {ubicacion.distritomunicipal}"
+
+
+def formulario_proyecto(proyecto=None) -> Dict:
+    """Formulario para crear o actualizar un proyecto"""
+    # Si proyecto es None, estamos creando uno nuevo
+    # Si no, estamos actualizando uno existente
+    es_nuevo = proyecto is None
+    titulo = (
+        "Crear nuevo proyecto"
+        if es_nuevo
+        else f"Actualizar proyecto: {proyecto.nombre_proyecto}"
+    )
+
+    print(f"[bold blue]{titulo}[/bold blue]")
+
+    # Valores por defecto
+    defaults = {
+        "nombre_proyecto": "",
+        "ubicacion": "",
+        "descripcion": "",
+    }
+
+    if not es_nuevo:
+        defaults["nombre_proyecto"] = proyecto.nombre_proyecto
+        defaults["ubicacion"] = proyecto.ubicacion
+        defaults["descripcion"] = proyecto.descripcion
+
+    # Recopilar datos
+    data = {}
+
+    nombre = questionary.text(
+        "Nombre del proyecto:", default=defaults["nombre_proyecto"]
+    ).ask()
+
+    if nombre is None:  # El usuario canceló
+        return {}
+
+    data["nombre_proyecto"] = nombre
+
+    # Preguntar si quiere cambiar la ubicación
+    cambiar_ubicacion = (
+        es_nuevo
+        or questionary.confirm(
+            "¿Desea cambiar la ubicación del proyecto?", default=False
+        ).ask()
+    )
+
+    if cambiar_ubicacion:
+        ubicacion = seleccionar_ubicacion()
+        if ubicacion:
+            data["ubicacion"] = ubicacion
+    elif not es_nuevo:
+        # Mantener la ubicación existente
+        data["ubicacion"] = defaults["ubicacion"]
+
+    # Descripción - puede quedar vacía y se generará automáticamente
+    generar_descripcion = questionary.confirm(
+        "¿Desea generar automáticamente la descripción del proyecto?",
+        default=not defaults["descripcion"],
+    ).ask()
+
+    if not generar_descripcion:
+        descripcion = questionary.text(
+            "Descripción del proyecto:", default=defaults["descripcion"]
+        ).ask()
+
+        if descripcion is not None:  # El usuario no canceló
+            data["descripcion"] = descripcion
+    else:
+        # Dejar vacío para que se genere automáticamente
+        data["descripcion"] = ""
+
+    return data
+
+
+@click.group(invoke_without_command=True)
+@click.pass_context
+def proyecto(ctx):
+    """Gestión de proyectos"""
+    if ctx.invoked_subcommand is None:
+        menu_principal()
+
+
+def menu_principal():
+    """Menú principal para la gestión de proyectos"""
+    while True:
+        accion = questionary.select(
+            "¿Qué desea hacer?",
+            choices=[
+                "Ver todos los proyectos",
+                "Buscar proyectos",
+                "Crear nuevo proyecto",
+                "Modificar proyecto existente",
+                "Eliminar proyecto",
+                "Volver al menú principal",
+            ],
+        ).ask()
+
+        if accion == "Volver al menú principal":
+            break
+
+        if accion == "Ver todos los proyectos":
+            proyectos = obtener_proyectos()
+            mostrar_proyectos(proyectos)
+
+        elif accion == "Buscar proyectos":
+            termino = questionary.text("Término de búsqueda:").ask()
+            if termino:
+                proyectos = buscar_proyectos(termino)
+                mostrar_proyectos(proyectos)
+
+        elif accion == "Crear nuevo proyecto":
+            datos = formulario_proyecto()
+            if datos:
+                nuevo_proyecto = crear_proyecto(datos)
+                if nuevo_proyecto:
+                    print(
+                        f"[bold green]Proyecto creado: {nuevo_proyecto.nombre_proyecto}[/bold green]"
+                    )
+
+        elif accion == "Modificar proyecto existente":
+            # Primero seleccionar el proyecto
+            id_proyecto = questionary.text(
+                "ID del proyecto a modificar (o buscar por nombre):"
+            ).ask()
+
+            if not id_proyecto:
+                continue
+
+            # Verificar si es un ID o un término de búsqueda
+            proyecto_a_editar = None
+            try:
+                id_num = int(id_proyecto)
+                proyecto_a_editar = obtener_proyecto(id_num)
+            except ValueError:
+                # Es un término de búsqueda
+                proyectos = buscar_proyectos(id_proyecto)
+                mostrar_proyectos(proyectos)
+
+                if not proyectos:
+                    continue
+
+                # Permitir seleccionar de la lista
+                opciones = [f"{p.id}: {p.nombre_proyecto}" for p in proyectos]
+                opciones.append("Cancelar")
+
+                seleccion = questionary.select(
+                    "Seleccione un proyecto para editar:", choices=opciones
+                ).ask()
+
+                if seleccion == "Cancelar":
+                    continue
+
+                id_seleccionado = int(seleccion.split(":")[0].strip())
+                proyecto_a_editar = obtener_proyecto(id_seleccionado)
+
+            if not proyecto_a_editar:
+                print("[bold red]No se encontró el proyecto[/bold red]")
+                continue
+
+            # Editar el proyecto
+            datos = formulario_proyecto(proyecto_a_editar)
+            if datos:
+                proyecto_actualizado = actualizar_proyecto(proyecto_a_editar.id, datos)
+                if proyecto_actualizado:
+                    print(
+                        f"[bold green]Proyecto actualizado: {proyecto_actualizado.nombre_proyecto}[/bold green]"
+                    )
+
+        elif accion == "Eliminar proyecto":
+            # Primero seleccionar el proyecto
+            id_proyecto = questionary.text(
+                "ID del proyecto a eliminar (o buscar por nombre):"
+            ).ask()
+
+            if not id_proyecto:
+                continue
+
+            # Verificar si es un ID o un término de búsqueda
+            proyecto_a_eliminar = None
+            try:
+                id_num = int(id_proyecto)
+                proyecto_a_eliminar = obtener_proyecto(id_num)
+                if proyecto_a_eliminar:
+                    print(
+                        f"Proyecto: {proyecto_a_eliminar.id} - {proyecto_a_eliminar.nombre_proyecto}"
+                    )
+            except ValueError:
+                # Es un término de búsqueda
+                proyectos = buscar_proyectos(id_proyecto)
+                mostrar_proyectos(proyectos)
+
+                if not proyectos:
+                    continue
+
+                # Permitir seleccionar de la lista
+                opciones = [f"{p.id}: {p.nombre_proyecto}" for p in proyectos]
+                opciones.append("Cancelar")
+
+                seleccion = questionary.select(
+                    "Seleccione un proyecto para eliminar:", choices=opciones
+                ).ask()
+
+                if seleccion == "Cancelar":
+                    continue
+
+                id_seleccionado = int(seleccion.split(":")[0].strip())
+                proyecto_a_eliminar = obtener_proyecto(id_seleccionado)
+
+            if not proyecto_a_eliminar:
+                print("[bold red]No se encontró el proyecto[/bold red]")
+                continue
+
+            # Confirmar eliminación
+            confirmar = questionary.confirm(
+                f"¿Está seguro de eliminar el proyecto '{proyecto_a_eliminar.nombre_proyecto}'?",
+                default=False,
+            ).ask()
+
+            if confirmar:
+                if eliminar_proyecto(proyecto_a_eliminar.id):
+                    print("[bold green]Proyecto eliminado correctamente[/bold green]")
+
+
+@proyecto.command("listar")
+def listar_proyectos():
+    """Listar todos los proyectos"""
+    proyectos = obtener_proyectos()
+    mostrar_proyectos(proyectos)
+
+
+@proyecto.command("buscar")
+@click.argument("termino")
+def cmd_buscar_proyectos(termino):
+    """Buscar proyectos por término"""
+    proyectos = buscar_proyectos(termino)
+    mostrar_proyectos(proyectos)
+
+
+@proyecto.command("crear")
+def cmd_crear_proyecto():
+    """Crear un nuevo proyecto"""
+    datos = formulario_proyecto()
+    if datos:
+        nuevo_proyecto = crear_proyecto(datos)
+        if nuevo_proyecto:
+            print(
+                f"[bold green]Proyecto creado: {nuevo_proyecto.nombre_proyecto}[/bold green]"
+            )
+
+
+@proyecto.command("modificar")
+@click.argument("id_proyecto", type=int)
+def cmd_modificar_proyecto(id_proyecto):
+    """Modificar un proyecto existente"""
+    proyecto_a_editar = obtener_proyecto(id_proyecto)
+    if not proyecto_a_editar:
+        print(f"[bold red]No se encontró el proyecto con ID {id_proyecto}[/bold red]")
+        return
+
+    datos = formulario_proyecto(proyecto_a_editar)
+    if datos:
+        proyecto_actualizado = actualizar_proyecto(id_proyecto, datos)
+        if proyecto_actualizado:
+            print(
+                f"[bold green]Proyecto actualizado: {proyecto_actualizado.nombre_proyecto}[/bold green]"
+            )
+
+
+@proyecto.command("eliminar")
+@click.argument("id_proyecto", type=int)
+def cmd_eliminar_proyecto(id_proyecto):
+    """Eliminar un proyecto existente"""
+    proyecto_a_eliminar = obtener_proyecto(id_proyecto)
+    if not proyecto_a_eliminar:
+        print(f"[bold red]No se encontró el proyecto con ID {id_proyecto}[/bold red]")
+        return
+
+    # Confirmar eliminación
+    confirmar = questionary.confirm(
+        f"¿Está seguro de eliminar el proyecto '{proyecto_a_eliminar.nombre_proyecto}'?",
+        default=False,
+    ).ask()
+
+    if confirmar:
+        if eliminar_proyecto(id_proyecto):
+            print("[bold green]Proyecto eliminado correctamente[/bold green]")
+
+
+if __name__ == "__main__":
+    proyecto()
