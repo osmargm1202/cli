@@ -53,6 +53,7 @@ class EnvEditor(App):
         
         content = ""
         env_example_path = os.path.join(os.path.dirname(self.env_file_path), ".env.example")
+        orgm_env_example_path = os.path.join(os.getcwd(), "orgm", ".env.example")
         
         # 1. Intentar cargar desde .env si existe
         if os.path.exists(self.env_file_path):
@@ -61,7 +62,19 @@ class EnvEditor(App):
                     content = f.read()
             except Exception as e:
                 content = f"# Error al leer el archivo: {str(e)}"
-        # 2. Si no existe .env, intentar cargar desde .env.example
+        # 2. Si no existe .env, intentar cargar desde ormg/.env.example
+        elif os.path.exists(orgm_env_example_path):
+            try:
+                with open(orgm_env_example_path, "r") as f:
+                    content = f.read()
+                content = f"# Contenido cargado desde orgm/.env.example\n{content}"
+                # Crear el archivo .env con el contenido de ormg/.env.example
+                with open(self.env_file_path, "w") as f:
+                    f.write(content)
+                console.print(f"Archivo [bold]{self.env_file_path}[/bold] creado con variables de [bold]ormg/.env.example[/bold]")
+            except Exception as e:
+                content = f"# Error al leer ormg/.env.example: {str(e)}"
+        # 3. Si no existe ormg/.env.example, intentar cargar desde .env.example local
         elif os.path.exists(env_example_path):
             try:
                 with open(env_example_path, "r") as f:
@@ -69,7 +82,7 @@ class EnvEditor(App):
                 content = f"# Contenido cargado desde .env.example\n{content}"
             except Exception as e:
                 content = f"# Error al leer .env.example: {str(e)}"
-        # 3. Si no existe ninguno, usar contenido predeterminado
+        # 4. Si no existe ninguno, usar contenido predeterminado
         else:
             content = """   # Archivo de variables de entorno
                             # Formato: VARIABLE=valor

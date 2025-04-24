@@ -14,8 +14,6 @@ console = Console()
 load_dotenv(override=True)
 
 
-url = os.getenv("SERVER_URL_U")
-
 # Variable global para almacenar el token
 token = None
 
