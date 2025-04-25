@@ -40,16 +40,15 @@ if not API_URL:
     )
 
 
-def generate_project_description(project_name: str) -> Optional[str]:
-    """
-    Genera una descripción para un proyecto basado en su nombre
-    utilizando una API externa de IA.
+def generate_text(text: str, config_name: str) -> Optional[str]:
+    """Llama al endpoint de IA para generar un contenido basado en el parámetro *text* y la configuración *config_name*.
 
     Args:
-        project_name: Nombre del proyecto
+        text: Texto de entrada que describe el contexto o prompt.
+        config_name: Nombre de la configuración del modelo / plantilla que la API debe aplicar.
 
     Returns:
-        Una descripción generada o None si hubo un error
+        Cadena con el resultado enviado por la API o ``None`` si ocurre un error.
     """
     if not API_URL:
         console.print(
@@ -57,12 +56,10 @@ def generate_project_description(project_name: str) -> Optional[str]:
         )
         return None
 
+    request_data = {"text": text, "config_name": config_name}
+
     try:
-        request_data = {
-            "text": project_name,
-            "config_name": "descripcion_electromecanica",
-        }
-        with spinner("Generando descripción de proyecto..."):
+        with spinner("Obteniendo respuesta IA..."):
             response = requests.post(
                 f"{API_URL}/ai", json=request_data, headers=headers, timeout=30
             )
@@ -75,15 +72,23 @@ def generate_project_description(project_name: str) -> Optional[str]:
             )
             return None
 
-        if "result" in data:
-            return data["result"]
+        # Algunos servicios devuelven la respuesta en 'result', otros en 'data' u otro campo.
+        return data["response"]
 
-        return None
     except requests.exceptions.RequestException as e:
         console.print(
             f"[bold red]Error al comunicarse con el servicio de IA: {e}[/bold red]"
         )
         return None
     except Exception as e:
-        console.print(f"[bold red]Error al generar descripción: {e}[/bold red]")
+        console.print(f"[bold red]Error al procesar respuesta IA: {e}[/bold red]")
         return None
+
+
+def generate_project_description(project_name: str) -> Optional[str]:
+    """Conveniencia: genera descripción electromecánica para un proyecto.
+
+    Mantiene la firma anterior para no romper código existente
+    (por ejemplo, *orgm/adm/proyectos.py*).
+    """
+    return generate_text(project_name, "descripcion_electromecanica")

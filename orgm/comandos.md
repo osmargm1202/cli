@@ -1,27 +1,49 @@
 [bold green]
-ORGM CLI: Herramienta integral de gestión y utilidades integradas
+ORGM CLI: Herramienta integral de gestión y utilidades
 [/bold green]
 
-Administra clientes, proyectos, cotizaciones, cuentas, documentos contables, realiza cálculos eléctricos y automatiza tu flujo de trabajo con Docker.
-[bold cyan]¡Consulta [link=file://comandos.md]comandos.md[/link] para descubrir todas las funcionalidades![/bold cyan].
+Administra clientes, proyectos, variables de entorno y firma de documentos PDF. Automatiza tu flujo de trabajo desde la terminal.
 
 Algunos comandos principales:
-[blue]clientes[/blue] Gestión de clientes y sus datos.
-[blue]Apis[/blue] Gestión y Prueba de APIS.
-[blue]calculos[/blue] Utilidades de ingeniería eléctrica.
-[blue]docker[/blue] Facilita tareas de contenedores Docker.
-[blue]env[/blue] Facilita carga de variables de ambiente.
-[blue]pdf[/blue] Operaciones con archivos PDF (firma digital).
+[blue]cliente[/blue] Gestión de clientes.
+[blue]proyecto[/blue] Gestión de proyectos.
+[blue]env[/blue] Variables de entorno (.env).
+[blue]pdf[/blue] Operaciones con PDF (firmas).
+[blue]update[/blue] Actualiza ORGM CLI.
+[blue]install[/blue] Instala ORGM CLI.
+[blue]cotizacion[/blue] Gestión de cotizaciones.
+[blue]ai[/blue] Consulta al servicio de IA.
 
-Para ayuda: [blue]orgm [[red]comando[/red]] --help[/blue]
+Para ayuda detallada:
+[blue]orgm --help[/blue] o [blue]orgm [red]comando[/red] --help[/blue]
 
 [bold yellow]COMANDOS DE GESTIÓN DE CLIENTES[/bold yellow]
-[blue]orgm clientes[/blue] - Lista todos los clientes y permite búsquedas interactivas.
-[blue]orgm clientes nuevo[/blue] - Crear un nuevo cliente mediante un formulario interactivo.
-[blue]orgm clientes ver [red]ID[/red][/blue] - Muestra detalles de un cliente específico y ofrece editarlo.
-[blue]orgm clientes editar [red]ID[/red][/blue] - Edita directamente un cliente existente.
-[blue]orgm clientes buscar[/blue] - Busca clientes por nombre, nombre comercial o número de forma interactiva.
+[blue]orgm cliente[/blue] Menú interactivo de clientes.
+[blue]orgm cliente listar[/blue] Lista todos los clientes.
+[blue]orgm cliente buscar [red]TÉRMINO[/red][/blue] Busca clientes.
+[blue]orgm cliente crear[/blue] Crea un nuevo cliente.
+[blue]orgm cliente modificar [red]ID[/red][/blue] Modifica un cliente.
+[blue]orgm cliente eliminar [red]ID[/red][/blue] Elimina un cliente.
 
-[bold yellow]COMANDOS DE GESTIÓN DE PDF[/bold yellow]
-[blue]orgm pdf firmar-ruta-archivo [red]ARCHIVO_PDF[/red] --x [red]X[/red] --y [red]Y[/red] --ancho [red]ANCHO[/red] [--salida [red]ARCHIVO_SALIDA[/red]][/blue] - Firma digitalmente un PDF usando el servicio protegido con Cloudflare Access.
-[blue]orgm pdf firmar [--x [red]X[/red]] [--y [red]Y[/red]] [--ancho [red]ANCHO[/red]][/blue] - Abre un selector de archivos para elegir un PDF y firmarlo automáticamente. El archivo firmado se guarda en la misma carpeta con el sufijo "\_signed".
+[bold yellow]COMANDOS DE GESTIÓN DE PROYECTOS[/bold yellow]
+[blue]orgm proyecto[/blue] Menú interactivo de proyectos.
+[blue]orgm proyecto listar[/blue] Lista todos los proyectos.
+[blue]orgm proyecto buscar [red]TÉRMINO[/red][/blue] Busca proyectos.
+[blue]orgm proyecto crear[/blue] Crea un nuevo proyecto.
+[blue]orgm proyecto modificar [red]ID[/red][/blue] Modifica un proyecto.
+[blue]orgm proyecto eliminar [red]ID[/red][/blue] Elimina un proyecto.
+
+[bold yellow]COMANDOS DE PDF[/bold yellow]
+[blue]orgm pdf firmar-ruta-archivo [red]ARCHIVO_PDF[/red] --x [red]X[/red] --y [red]Y[/red] --ancho [red]ANCHO[/red] [--salida ARCHIVO][/blue] Firma un PDF indicando ruta.
+[blue]orgm pdf firmar [--x X] [--y Y] [--ancho ANCHO][/blue] Selector de archivos para firmar PDF.
+
+[bold yellow]COMANDOS DE COTIZACIONES[/bold yellow]
+[blue]orgm cotizacion[/blue] Menú interactivo de cotizaciones.
+[blue]orgm cotizacion listar[/blue] Lista todas las cotizaciones.
+[blue]orgm cotizacion buscar [red]TÉRMINO[/red][/blue] Busca cotizaciones.
+[blue]orgm cotizacion crear[/blue] Crea una nueva cotización.
+[blue]orgm cotizacion modificar [red]ID[/red][/blue] Modifica una cotización.
+[blue]orgm cotizacion eliminar [red]ID[/red][/blue] Elimina una cotización.
+
+[bold yellow]COMANDO DE IA[/bold yellow]
+[blue]orgm ai [--config CONFIG] "PROMPT"[/blue] Genera texto con IA.

@@ -51,7 +51,7 @@ def obtener_proyectos() -> List[Proyecto]:
         response.raise_for_status()
 
         proyectos_data = response.json()
-        proyectos = [Proyecto.parse_obj(proyecto) for proyecto in proyectos_data]
+        proyectos = [Proyecto.model_validate(proyecto) for proyecto in proyectos_data]
         return proyectos
     except Exception as e:
         console.print(f"[bold red]Error al obtener proyectos: {e}[/bold red]")
@@ -129,6 +129,7 @@ def actualizar_proyecto(id_proyecto: int, proyecto_data: Dict) -> Optional[Proye
                 "nombre_proyecto", proyecto_existente.nombre_proyecto
             )
             descripcion = generate_project_description(nombre)
+            print(f"Descripción generada: {descripcion}")
             if descripcion:
                 proyecto_data["descripcion"] = descripcion
 
@@ -144,7 +145,9 @@ def actualizar_proyecto(id_proyecto: int, proyecto_data: Dict) -> Optional[Proye
 
         proyecto_actualizado = Proyecto.parse_obj(response.json()[0])
         console.print(
-            f"[bold green]Proyecto actualizado correctamente: {proyecto_actualizado.nombre_proyecto}[/bold green]"
+            f"[bold green]Proyecto actualizado correctamente: [blue]{proyecto_actualizado.nombre_proyecto}[/blue][/bold green] \n"
+            f"[bold green]Descripción: [blue]{proyecto_actualizado.descripcion}[/blue][/bold green] \n"
+            f"[bold green]Ubicación: [blue]{proyecto_actualizado.ubicacion}[/blue][/bold green] \n"
         )
         return proyecto_actualizado
     except Exception as e:
