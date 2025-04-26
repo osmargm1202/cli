@@ -1,31 +1,31 @@
 # -*- coding: utf-8 -*-
 import os
-import requests
 from typing import Optional
 from pathlib import Path
-from dotenv import load_dotenv
 from rich import print
 
-# Quitamos las variables de entorno específicas de tkinter
-# os.environ['XDG_SESSION_TYPE'] = 'x11'
-# os.environ['TK_SILENCE_DEPRECATION'] = '1'
+# Initialize variables as None at module level
+FIRMA_URL = None
+CF_ACCESS_CLIENT_ID = None
+CF_ACCESS_CLIENT_SECRET = None
 
-load_dotenv(override=True)
-
-# Obtener variables de entorno necesarias
-FIRMA_URL = os.getenv("FIRMA_URL")
-CF_ACCESS_CLIENT_ID = os.getenv("CF_ACCESS_CLIENT_ID")
-CF_ACCESS_CLIENT_SECRET = os.getenv("CF_ACCESS_CLIENT_SECRET")
-
-# print(FIRMA_URL)
-# print(CF_ACCESS_CLIENT_ID)
-# print(CF_ACCESS_CLIENT_SECRET)
-
-
-if not all([FIRMA_URL, CF_ACCESS_CLIENT_ID, CF_ACCESS_CLIENT_SECRET]):
-    print(
-        "[bold red]Error: Se requieren las variables de entorno CF_DOMAIN, CF_ACCESS_CLIENT_ID y CF_ACCESS_CLIENT_SECRET[/bold red]"
-    )
+def initialize():
+    """Initialize variables that were previously at module level"""
+    global FIRMA_URL, CF_ACCESS_CLIENT_ID, CF_ACCESS_CLIENT_SECRET
+    
+    from dotenv import load_dotenv
+    
+    load_dotenv(override=True)
+    
+    # Obtener variables de entorno necesarias
+    FIRMA_URL = os.getenv("FIRMA_URL")
+    CF_ACCESS_CLIENT_ID = os.getenv("CF_ACCESS_CLIENT_ID")
+    CF_ACCESS_CLIENT_SECRET = os.getenv("CF_ACCESS_CLIENT_SECRET")
+    
+    if not all([FIRMA_URL, CF_ACCESS_CLIENT_ID, CF_ACCESS_CLIENT_SECRET]):
+        print(
+            "[bold red]Error: Se requieren las variables de entorno FIRMA_URL, CF_ACCESS_CLIENT_ID y CF_ACCESS_CLIENT_SECRET[/bold red]"
+        )
 
 
 def firmar_pdf(
@@ -44,6 +44,12 @@ def firmar_pdf(
     Returns:
         Ruta al archivo PDF firmado o None si ocurre un error
     """
+    # Ensure initialization is done
+    if FIRMA_URL is None:
+        initialize()
+        
+    import requests
+    
     try:
         # Verificar que el archivo exista
         pdf_path = Path(archivo_pdf)
@@ -102,6 +108,10 @@ def seleccionar_y_firmar_pdf(x1: int = 100, y1: int = 100, ancho: int = 200):
     Returns:
         Ruta al archivo PDF firmado o None si ocurre un error
     """
+    # Ensure initialization is done
+    if FIRMA_URL is None:
+        initialize()
+        
     try:
         # Importar Kivy
         from kivy.app import App

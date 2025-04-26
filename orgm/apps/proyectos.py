@@ -14,6 +14,7 @@ from orgm.adm.proyectos import (
     obtener_ubicaciones,
     buscar_ubicaciones,
 )
+from orgm.adm.db import Proyecto
 
 console = Console()
 
@@ -183,6 +184,7 @@ def menu_principal():
                 "Crear nuevo proyecto",
                 "Modificar proyecto existente",
                 "Eliminar proyecto",
+                "Ver detalles de un proyecto",
                 "Volver al menú principal",
             ],
         ).ask()
@@ -199,6 +201,20 @@ def menu_principal():
             if termino:
                 proyectos = buscar_proyectos(termino)
                 mostrar_proyectos(proyectos)
+                if proyectos:
+                    opciones = [f"{p.id}: {p.nombre_proyecto}" for p in proyectos] + ["Cancelar"]
+                    sel = questionary.select("¿Qué proyecto desea ver?", choices=opciones).ask()
+                    if sel != "Cancelar":
+                        pid = int(sel.split(":" )[0])
+                        proyecto_sel = obtener_proyecto(pid)
+                        if proyecto_sel:
+                            mostrar_proyecto_detalle(proyecto_sel)
+                            if questionary.confirm("¿Desea editar este proyecto?", default=False).ask():
+                                datos = formulario_proyecto(proyecto_sel)
+                                if datos:
+                                    proyecto_actualizado = actualizar_proyecto(pid, datos)
+                                    if proyecto_actualizado:
+                                        print("[bold green]Proyecto actualizado correctamente[/bold green]")
 
         elif accion == "Crear nuevo proyecto":
             datos = formulario_proyecto()
@@ -312,6 +328,19 @@ def menu_principal():
                 if eliminar_proyecto(proyecto_a_eliminar.id):
                     print("[bold green]Proyecto eliminado correctamente[/bold green]")
 
+        elif accion == "Ver detalles de un proyecto":
+            id_text = questionary.text("ID del proyecto a ver (o búsqueda):").ask()
+            if not id_text:
+                continue
+            try:
+                id_num = int(id_text)
+            except ValueError:
+                print("[bold red]ID inválido[/bold red]")
+                continue
+            proyecto_obj = obtener_proyecto(id_num)
+            if proyecto_obj:
+                mostrar_proyecto_detalle(proyecto_obj)
+
 
 @proyecto.command("listar")
 def listar_proyectos():
@@ -376,6 +405,30 @@ def cmd_eliminar_proyecto(id_proyecto):
     if confirmar:
         if eliminar_proyecto(id_proyecto):
             print("[bold green]Proyecto eliminado correctamente[/bold green]")
+
+
+def mostrar_proyecto_detalle(proyecto: Proyecto):
+    """Muestra los datos completos de un proyecto"""
+    table = Table(title=f"Proyecto: {proyecto.nombre_proyecto} (ID: {proyecto.id})")
+    table.add_column("Campo", style="cyan")
+    table.add_column("Valor", style="green")
+
+    for campo in proyecto.__fields__.keys():
+        valor = getattr(proyecto, campo)
+        table.add_row(campo, str(valor))
+
+    console.print(table)
+
+
+@proyecto.command("ver")
+@click.argument("id_proyecto", type=int)
+def cmd_ver_proyecto(id_proyecto):
+    """Ver los datos de un proyecto por su ID"""
+    proyecto_obj = obtener_proyecto(id_proyecto)
+    if not proyecto_obj:
+        print(f"[bold red]No se encontró el proyecto con ID {id_proyecto}[/bold red]")
+        return
+    mostrar_proyecto_detalle(proyecto_obj)
 
 
 if __name__ == "__main__":

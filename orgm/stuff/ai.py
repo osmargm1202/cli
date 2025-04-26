@@ -1,43 +1,53 @@
 import os
-import requests
-from dotenv import load_dotenv
-from rich.console import Console
 from typing import Optional
-from orgm.stuff.spinner import spinner
+from rich.console import Console
 
 console = Console()
-load_dotenv(override=True)
 
-# Obtener la URL base de la API desde las variables de entorno
-API_URL = os.getenv("API_URL")
-# Obtener credenciales de Cloudflare Access
-CF_ACCESS_CLIENT_ID = os.getenv("CF_ACCESS_CLIENT_ID")
-CF_ACCESS_CLIENT_SECRET = os.getenv("CF_ACCESS_CLIENT_SECRET")
+# Initialize variables as None at module level
+API_URL = None
+headers = None
+CF_ACCESS_CLIENT_ID = None
+CF_ACCESS_CLIENT_SECRET = None
 
-if not all([CF_ACCESS_CLIENT_ID, CF_ACCESS_CLIENT_SECRET]):
-    console.print(
-        "[bold yellow]Advertencia: CF_ACCESS_CLIENT_ID o CF_ACCESS_CLIENT_SECRET no están definidas en las variables de entorno.[/bold yellow]"
-    )
-    console.print(
-        "[bold yellow]Las consultas no incluirán autenticación de Cloudflare Access.[/bold yellow]"
-    )
-
-# Configuración de los headers para la API
-headers = {"Content-Type": "application/json", "Accept": "application/json"}
-
-# Agregar headers de Cloudflare Access si están disponibles
-if CF_ACCESS_CLIENT_ID and CF_ACCESS_CLIENT_SECRET:
-    headers["CF-Access-Client-Id"] = CF_ACCESS_CLIENT_ID
-    headers["CF-Access-Client-Secret"] = CF_ACCESS_CLIENT_SECRET
-
-
-if not API_URL:
-    console.print(
-        "[bold yellow]Advertencia: API_URL no está definida en las variables de entorno.[/bold yellow]"
-    )
-    console.print(
-        "[bold yellow]La generación automática de descripciones no estará disponible.[/bold yellow]"
-    )
+def initialize():
+    """Initialize variables that were previously at module level"""
+    global API_URL, headers, CF_ACCESS_CLIENT_ID, CF_ACCESS_CLIENT_SECRET
+    
+    from dotenv import load_dotenv
+    
+    load_dotenv(override=True)
+    
+    # Obtener la URL base de la API desde las variables de entorno
+    API_URL = os.getenv("API_URL")
+    
+    # Obtener credenciales de Cloudflare Access
+    CF_ACCESS_CLIENT_ID = os.getenv("CF_ACCESS_CLIENT_ID")
+    CF_ACCESS_CLIENT_SECRET = os.getenv("CF_ACCESS_CLIENT_SECRET")
+    
+    if not all([CF_ACCESS_CLIENT_ID, CF_ACCESS_CLIENT_SECRET]):
+        console.print(
+            "[bold yellow]Advertencia: CF_ACCESS_CLIENT_ID o CF_ACCESS_CLIENT_SECRET no están definidas en las variables de entorno.[/bold yellow]"
+        )
+        console.print(
+            "[bold yellow]Las consultas no incluirán autenticación de Cloudflare Access.[/bold yellow]"
+        )
+    
+    # Configuración de los headers para la API
+    headers = {"Content-Type": "application/json", "Accept": "application/json"}
+    
+    # Agregar headers de Cloudflare Access si están disponibles
+    if CF_ACCESS_CLIENT_ID and CF_ACCESS_CLIENT_SECRET:
+        headers["CF-Access-Client-Id"] = CF_ACCESS_CLIENT_ID
+        headers["CF-Access-Client-Secret"] = CF_ACCESS_CLIENT_SECRET
+    
+    if not API_URL:
+        console.print(
+            "[bold yellow]Advertencia: API_URL no está definida en las variables de entorno.[/bold yellow]"
+        )
+        console.print(
+            "[bold yellow]La generación automática de descripciones no estará disponible.[/bold yellow]"
+        )
 
 
 def generate_text(text: str, config_name: str) -> Optional[str]:
@@ -50,6 +60,12 @@ def generate_text(text: str, config_name: str) -> Optional[str]:
     Returns:
         Cadena con el resultado enviado por la API o ``None`` si ocurre un error.
     """
+    # Ensure initialization is done
+    if headers is None:
+        initialize()
+    
+    import requests
+    
     if not API_URL:
         console.print(
             "[bold yellow]No se puede generar descripción: URL de API no configurada[/bold yellow]"
@@ -59,10 +75,9 @@ def generate_text(text: str, config_name: str) -> Optional[str]:
     request_data = {"text": text, "config_name": config_name}
 
     try:
-        with spinner("Obteniendo respuesta IA..."):
-            response = requests.post(
-                f"{API_URL}/ai", json=request_data, headers=headers, timeout=30
-            )
+        response = requests.post(
+            f"{API_URL}/ai", json=request_data, headers=headers, timeout=30
+        )
         response.raise_for_status()
 
         data = response.json()

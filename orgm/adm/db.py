@@ -7,16 +7,43 @@ from sqlalchemy.dialects.postgresql import JSONB
 from dataclasses import dataclass, field
 import uuid
 
-load_dotenv()
+# Initialize these as None at the module level
+DATABASE_USER = None
+DATABASE_PASSWORD = None
+DATABASE_HOST = None
+DATABASE_NAME = None
+DATABASE_SEARCH_PATH = None
+DATABASE_URL = None
+engine = None
 
-DATABASE_USER = os.getenv("DATABASE_USER")
-DATABASE_PASSWORD = os.getenv("DATABASE_PASSWORD")
-DATABASE_HOST = os.getenv("DATABASE_HOST")
-DATABASE_NAME = os.getenv("DATABASE_NAME")
-DATABASE_SEARCH_PATH = os.getenv("DATABASE_SEARCH_PATH")
-DATABASE_URL = (
-    f"postgresql://{DATABASE_USER}:{DATABASE_PASSWORD}@{DATABASE_HOST}/{DATABASE_NAME}"
-)
+def initialize_db():
+    """Initialize database variables that were previously at module level"""
+    global DATABASE_USER, DATABASE_PASSWORD, DATABASE_HOST, DATABASE_NAME
+    global DATABASE_SEARCH_PATH, DATABASE_URL, engine
+    
+    load_dotenv()
+    
+    DATABASE_USER = os.getenv("DATABASE_USER")
+    DATABASE_PASSWORD = os.getenv("DATABASE_PASSWORD")
+    DATABASE_HOST = os.getenv("DATABASE_HOST")
+    DATABASE_NAME = os.getenv("DATABASE_NAME")
+    DATABASE_SEARCH_PATH = os.getenv("DATABASE_SEARCH_PATH")
+    DATABASE_URL = (
+        f"postgresql://{DATABASE_USER}:{DATABASE_PASSWORD}@{DATABASE_HOST}/{DATABASE_NAME}"
+    )
+    
+    # Create the engine if needed
+    if engine is None and all([DATABASE_USER, DATABASE_PASSWORD, DATABASE_HOST, DATABASE_NAME]):
+        try:
+            if DATABASE_SEARCH_PATH:
+                engine = create_engine(
+                    DATABASE_URL,
+                    connect_args={"options": f"-c search_path={DATABASE_SEARCH_PATH}"},
+                )
+            else:
+                engine = create_engine(DATABASE_URL)
+        except Exception as e:
+            print(f"[bold red]Error al crear el motor de base de datos: {e}[/bold red]")
 
 
 class Cliente(SQLModel, table=True):
@@ -368,22 +395,27 @@ class CategoriaPresupuesto(PartidaPresupuesto):
         return result
 
 
-if __name__ == "__main__":
+def create_db_schema():
+    """Create database schema if needed"""
+    if engine is None:
+        initialize_db()
+        
+    if engine is None:
+        print("[bold red]No se pudo crear el esquema: motor de base de datos no inicializado[/bold red]")
+        return
+        
     try:
         if DATABASE_SEARCH_PATH:
-            engine = create_engine(
-                DATABASE_URL,
-                connect_args={"options": f"-c search_path={DATABASE_SEARCH_PATH}"},
-            )
             with engine.connect() as c:
                 c.execute(text(f"CREATE SCHEMA IF NOT EXISTS {DATABASE_SEARCH_PATH}"))
                 c.commit()
                 print(f"Esquema creado: {DATABASE_SEARCH_PATH}")
-            SQLModel.metadata.create_all(engine)
-        else:
-            engine = create_engine(DATABASE_URL)
-            SQLModel.metadata.create_all(engine)
+        SQLModel.metadata.create_all(engine)
+        print("[bold green]Tablas creadas correctamente[/bold green]")
     except Exception as e:
-        print(f"Error al crear el esquema: {e}")
+        print(f"[bold red]Error al crear el esquema: {e}[/bold red]")
 
+
+if __name__ == "__main__":
+    create_db_schema()
     # with open("datos/template.csv", "r", encoding=

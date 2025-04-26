@@ -3,24 +3,59 @@ import click
 import os
 import subprocess
 import requests
+import json
+import platform
+from rich.console import Console
 from dotenv import load_dotenv
-from rich import print
+
+# Import all modules upfront
 from orgm.stuff.variables import edit_env_variables
 from orgm.adm.firma import firmar_pdf, seleccionar_y_firmar_pdf
-from orgm.apps.clientes import cliente
+from orgm.apps.clientes import clientes
 from orgm.apps.proyectos import proyecto
 from orgm.apps.cotizaciones import cotizacion
-from rich.console import Console
+from orgm.stuff.docker_cli import docker as docker_cmd
+from orgm.stuff.ai import generate_text
 
+# Load environment variables
 load_dotenv(override=True)
 
+# Create a console instance for output
 console = Console()
 
 # Variable global para almacenar el token
 token = None
 
+def print_comandos():
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    comandos_path = os.path.join(script_dir, "comandos.md")
+    with open(comandos_path, "r", encoding="utf-8") as f:
+        comandos = f.read()
+    console.print(comandos)
 
-# Comprobación de endpoints
+
+class CustomGroup(click.Group):
+    def get_help(self, ctx):
+        print_comandos()
+        return ""
+
+
+@click.group(invoke_without_command=True, cls=CustomGroup)
+@click.version_option()
+@click.help_option("-h", "--help", help="Muestra la ayuda del comando")
+@click.pass_context
+def cli(ctx):
+    if ctx.invoked_subcommand is None:
+        help()
+
+
+@click.command()
+@click.help_option("-h", "--help", help="Muestra la ayuda del comando")
+def help():
+    print_comandos()
+
+@click.command("check")
+@click.help_option("-h", "--help", help="Muestra la ayuda del comando")
 def check_urls():
     """Verifica rápidamente la accesibilidad de URLs clave definidas en variables de entorno."""
     endpoints = {
@@ -65,45 +100,21 @@ def check_urls():
             print(f"[bold red]{name} inaccesible:[/bold red] {e} → {url}")
 
 
-def print_comandos():
-    # Get the directory where the script is located
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    # print(script_dir)
-    # Build path relative to script location
-    comandos_path = os.path.join(script_dir, "comandos.md")
-    with open(comandos_path, "r", encoding="utf-8") as f:
-        comandos = f.read()
-    print(comandos)
-
-
-class CustomGroup(click.Group):
-    def get_help(self, ctx):
-        print_comandos()
-        return ""
-
-
-@click.group(invoke_without_command=True, cls=CustomGroup)
-@click.version_option()
-@click.help_option("-h", "--help", help="Muestra la ayuda del comando")
-@click.pass_context
-def cli(ctx):
-    if ctx.invoked_subcommand is None:
-        print_comandos()
-        check_urls()
-
-
 @click.command()
 @click.help_option("-h", "--help", help="Muestra la ayuda del comando")
-def help():
-    print_comandos()
-
-
-@click.command()
-@click.help_option("-h", "--help", help="Muestra la ayuda del comando")
-# @click.pass_context  # Pasa el contexto del comando al callback de la función
 def update():
     """Actualizar el paquete de ORGM CLI"""
     print("Actualizando paquete de ORGM CLI")
+
+    # Detect platform and delegate to update.bat on Windows
+    if platform.system() == "Windows":
+        bat_path = os.path.join(os.path.dirname(__file__), "update.bat")
+        try:
+            print("Sistema Windows detectado. Ejecutando update.bat...")
+            subprocess.check_call([bat_path], shell=True)
+        except subprocess.CalledProcessError as e:
+            print(f"Error al ejecutar update.bat: {e}")
+        return
 
     try:
         # Obtener la rama específica del entorno si está configurada
@@ -272,8 +283,17 @@ def pdf_firmar_interactivo(x_pos, y_pos, ancho):
         print(f"[bold red]Error al firmar el PDF: {e}[/bold red]")
 
 
-# Agregar el comando AI
-@click.command("ai")
+# Convertir el comando AI en un grupo de comandos
+@click.group(invoke_without_command=True)
+@click.help_option("-h", "--help", help="Muestra la ayuda del comando")
+@click.pass_context
+def ai(ctx):
+    """Operaciones relacionadas con la IA"""
+    if ctx.invoked_subcommand is None:
+        click.echo("Uso: orgm ai [prompt|configs|config-upload]")
+
+
+@ai.command("prompt")
 @click.option(
     "--config",
     "-c",
@@ -283,13 +303,11 @@ def pdf_firmar_interactivo(x_pos, y_pos, ancho):
 )
 @click.argument("prompt", nargs=-1, required=True)
 @click.help_option("-h", "--help", help="Muestra la ayuda del comando")
-def ai_command(config_name, prompt):
+def ai_prompt(config_name, prompt):
     """Genera texto usando el servicio de IA.
 
     PROMPT: Texto que describe la solicitud a la IA.
     """
-    from orgm.stuff.ai import generate_text
-
     # Unir el prompt que puede venir en múltiples palabras
     prompt_text = " ".join(prompt).strip()
 
@@ -308,16 +326,102 @@ def ai_command(config_name, prompt):
         print()  # nueva línea al finalizar
 
 
+@ai.command("configs")
+@click.help_option("-h", "--help", help="Muestra las configuraciones disponibles")
+def ai_configs():
+    """Lista las configuraciones disponibles en el servicio de IA"""
+    API_URL = os.getenv("API_URL")
+    if not API_URL:
+        print("[bold red]Error: API_URL no está definida en las variables de entorno.[/bold red]")
+        return
+
+    # Obtener credenciales de Cloudflare Access
+    CF_ACCESS_CLIENT_ID = os.getenv("CF_ACCESS_CLIENT_ID")
+    CF_ACCESS_CLIENT_SECRET = os.getenv("CF_ACCESS_CLIENT_SECRET")
+
+    # Configuración de los headers para la API
+    headers = {"Content-Type": "application/json", "Accept": "application/json"}
+
+    # Agregar headers de Cloudflare Access si están disponibles
+    if CF_ACCESS_CLIENT_ID and CF_ACCESS_CLIENT_SECRET:
+        headers["CF-Access-Client-Id"] = CF_ACCESS_CLIENT_ID
+        headers["CF-Access-Client-Secret"] = CF_ACCESS_CLIENT_SECRET
+
+    try:
+        response = requests.get(f"{API_URL}/configs", headers=headers, timeout=10)
+        response.raise_for_status()
+        
+        configs = response.json()
+        print("[bold green]Configuraciones disponibles:[/bold green]")
+        for config in configs:
+            print(f"  - {config}")
+    except requests.exceptions.RequestException as e:
+        print(f"[bold red]Error al comunicarse con el servicio: {e}[/bold red]")
+    except Exception as e:
+        print(f"[bold red]Error al procesar la respuesta: {e}[/bold red]")
+
+
+@ai.command("config-upload")
+@click.argument("config_name", required=True)
+@click.argument("config_file", type=click.Path(exists=True), required=True)
+@click.help_option("-h", "--help", help="Sube una configuración al servicio de IA")
+def ai_config_upload(config_name, config_file):
+    """Carga una configuración desde un archivo JSON al servicio de IA
+
+    CONFIG_NAME: Nombre de la configuración a subir
+    CONFIG_FILE: Ruta al archivo JSON que contiene la configuración
+    """
+    API_URL = os.getenv("API_URL")
+    if not API_URL:
+        print("[bold red]Error: API_URL no está definida en las variables de entorno.[/bold red]")
+        return
+
+    # Obtener credenciales de Cloudflare Access
+    CF_ACCESS_CLIENT_ID = os.getenv("CF_ACCESS_CLIENT_ID")
+    CF_ACCESS_CLIENT_SECRET = os.getenv("CF_ACCESS_CLIENT_SECRET")
+
+    # Configuración de los headers para la API
+    headers = {"Content-Type": "application/json", "Accept": "application/json"}
+
+    # Agregar headers de Cloudflare Access si están disponibles
+    if CF_ACCESS_CLIENT_ID and CF_ACCESS_CLIENT_SECRET:
+        headers["CF-Access-Client-Id"] = CF_ACCESS_CLIENT_ID
+        headers["CF-Access-Client-Secret"] = CF_ACCESS_CLIENT_SECRET
+
+    try:
+        # Cargar el archivo JSON
+        with open(config_file, 'r', encoding='utf-8') as f:
+            config_data = json.load(f)
+        
+        response = requests.post(
+            f"{API_URL}/configs/{config_name}", 
+            json=config_data, 
+            headers=headers, 
+            timeout=10
+        )
+        response.raise_for_status()
+        
+        print(f"[bold green]Configuración '{config_name}' subida correctamente.[/bold green]")
+    except json.JSONDecodeError:
+        print(f"[bold red]Error: El archivo '{config_file}' no contiene JSON válido.[/bold red]")
+    except requests.exceptions.RequestException as e:
+        print(f"[bold red]Error al comunicarse con el servicio: {e}[/bold red]")
+    except Exception as e:
+        print(f"[bold red]Error al procesar la solicitud: {e}[/bold red]")
+
+
 # Agregar los comandos al grupo CLI
 cli.add_command(update)
 cli.add_command(install)
+cli.add_command(check_urls)
 cli.add_command(help)
 cli.add_command(env)
-cli.add_command(cliente)
+cli.add_command(clientes, name="cliente")
 cli.add_command(proyecto)
 cli.add_command(pdf)
-cli.add_command(ai_command)
+cli.add_command(ai)
 cli.add_command(cotizacion)
+cli.add_command(docker_cmd, name="docker")
 
 
 if __name__ == "__main__":

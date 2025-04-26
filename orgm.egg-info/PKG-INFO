@@ -11,8 +11,10 @@ Requires-Python: >=3.6
 Description-Content-Type: text/markdown
 License-File: LICENSE
 Requires-Dist: click
+Requires-Dist: httpx>=0.28.1
 Requires-Dist: kivy>=2.3.1
 Requires-Dist: plyer>=2.1.0
+Requires-Dist: pyperclip>=1.9.0
 Requires-Dist: python-dotenv>=1.0.1
 Requires-Dist: questionary>=2.1.0
 Requires-Dist: requests>=2.32.3
@@ -27,8 +29,29 @@ Dynamic: home-page
 Dynamic: license-file
 Dynamic: requires-python
 
-'''
+### windows
 
-curl -sSL https://github.com/osmargm1202/cli.git | uv tool install "git+https://github.com/osmargm1202/cli.git"
+```
 
-'''
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+uv tool install "git+https://github.com/osmargm1202/cli.git"
+
+```
+
+### linux
+
+```
+
+curl -LsSf https://astral.sh/uv/install.sh | sh
+uv tool install "git+https://github.com/osmargm1202/cli.git"
+
+```
+
+### linux
+
+```
+
+wget -qO- https://astral.sh/uv/install.sh | sh
+uv tool install "git+https://github.com/osmargm1202/cli.git"
+
+```

@@ -4,22 +4,312 @@ from typing import Dict, Optional
 from rich.console import Console
 from rich.table import Table
 from rich import print
-from orgm.adm.cotizaciones import (
-    obtener_cotizaciones,
-    obtener_cotizacion,
-    crear_cotizacion,
-    actualizar_cotizacion,
-    eliminar_cotizacion,
-    buscar_cotizaciones,
-)
+from orgm.stuff.divisa import obtener_tasa_divisa
 from orgm.adm.servicios import obtener_servicios
 from orgm.stuff.ai import generate_project_description
-from orgm.stuff.spinner import spinner
 import os, requests
 from orgm.adm.clientes import buscar_clientes
 from orgm.adm.cotizaciones import cotizaciones_por_cliente
+from orgm.adm.db import Cotizacion
 
 console = Console()
+
+
+import os
+from datetime import datetime
+from typing import Dict, List, Optional, Union
+
+import requests
+from dotenv import load_dotenv
+from rich.console import Console
+from rich.table import Table
+from orgm.adm.db import Cotizacion
+
+console = Console()
+load_dotenv(override=True)
+
+# Obtener la URL de PostgREST desde las variables de entorno
+POSTGREST_URL = os.getenv("POSTGREST_URL")
+if not POSTGREST_URL:
+    console.print(
+        "[bold red]Error: POSTGREST_URL no está definida en las variables de entorno[/bold red]"
+    )
+    exit(1)
+
+# Obtener credenciales de Cloudflare Access
+CF_ACCESS_CLIENT_ID = os.getenv("CF_ACCESS_CLIENT_ID")
+CF_ACCESS_CLIENT_SECRET = os.getenv("CF_ACCESS_CLIENT_SECRET")
+
+if not all([CF_ACCESS_CLIENT_ID, CF_ACCESS_CLIENT_SECRET]):
+    console.print(
+        "[bold yellow]Advertencia: CF_ACCESS_CLIENT_ID o CF_ACCESS_CLIENT_SECRET no están definidas en las variables de entorno.[/bold yellow]"
+    )
+    console.print(
+        "[bold yellow]Las consultas no incluirán autenticación de Cloudflare Access.[/bold yellow]"
+    )
+
+# Configuración de los headers para PostgREST
+headers = {
+    "Content-Type": "application/json",
+    "Accept": "application/json",
+    "Prefer": "return=representation",
+}
+
+# Agregar headers de Cloudflare Access si están disponibles
+if CF_ACCESS_CLIENT_ID and CF_ACCESS_CLIENT_SECRET:
+    headers["CF-Access-Client-Id"] = CF_ACCESS_CLIENT_ID
+    headers["CF-Access-Client-Secret"] = CF_ACCESS_CLIENT_SECRET
+
+
+def obtener_cotizaciones() -> List[Dict]:
+    """
+    Obtiene todas las cotizaciones.
+    
+    Returns:
+        List[Dict]: Lista de cotizaciones.
+    """
+    try:
+        response = requests.get(f"{POSTGREST_URL}/cotizacion", headers=headers)
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.HTTPError as e:
+        console.print(f"[bold red]Error en la solicitud HTTP: {e}[/bold red]")
+        return []
+    except requests.exceptions.RequestException as e:
+        console.print(f"[bold red]Error en la conexión: {e}[/bold red]")
+        return []
+    except Exception as e:
+        console.print(f"[bold red]Error inesperado: {e}[/bold red]")
+        return []
+
+
+def obtener_cotizacion(id_cotizacion: int) -> Optional[Dict]:
+    """
+    Obtiene una cotización específica por su ID.
+    
+    Args:
+        id_cotizacion (int): ID de la cotización a buscar.
+        
+    Returns:
+        Optional[Dict]: Datos de la cotización o None si no se encuentra.
+    """
+    try:
+        response = requests.get(
+            f"{POSTGREST_URL}/cotizacion?id=eq.{id_cotizacion}", headers=headers
+        )
+        response.raise_for_status()
+        result = response.json()
+        return result[0] if result else None
+    except requests.exceptions.HTTPError as e:
+        console.print(f"[bold red]Error en la solicitud HTTP: {e}[/bold red]")
+        return None
+    except requests.exceptions.RequestException as e:
+        console.print(f"[bold red]Error en la conexión: {e}[/bold red]")
+        return None
+    except Exception as e:
+        console.print(f"[bold red]Error inesperado: {e}[/bold red]")
+        return None
+
+
+def crear_cotizacion(datos: Dict) -> Optional[Dict]:
+    """
+    Crea una nueva cotización.
+    
+    Args:
+        datos (Dict): Datos de la cotización a crear.
+        
+    Returns:
+        Optional[Dict]: Cotización creada o None si falla.
+    """
+    try:
+        # Asegurar que tenga fecha de creación
+        if "fecha_creacion" not in datos:
+            datos["fecha_creacion"] = datetime.now().isoformat()
+            
+        response = requests.post(f"{POSTGREST_URL}/cotizacion", json=datos, headers=headers)
+        response.raise_for_status()
+        return response.json()[0] if response.json() else None
+    except requests.exceptions.HTTPError as e:
+        console.print(f"[bold red]Error en la solicitud HTTP: {e}[/bold red]")
+        return None
+    except requests.exceptions.RequestException as e:
+        console.print(f"[bold red]Error en la conexión: {e}[/bold red]")
+        return None
+    except Exception as e:
+        console.print(f"[bold red]Error inesperado: {e}[/bold red]")
+        return None
+
+
+def actualizar_cotizacion(id_cotizacion: int, datos: Dict) -> bool:
+    """
+    Actualiza una cotización existente.
+    
+    Args:
+        id_cotizacion (int): ID de la cotización a actualizar.
+        datos (Dict): Nuevos datos para la cotización.
+        
+    Returns:
+        bool: True si la actualización fue exitosa, False en caso contrario.
+    """
+    try:
+        # Remover id si está en los datos para evitar conflictos
+        if "id" in datos:
+            del datos["id"]
+            
+        response = requests.patch(
+            f"{POSTGREST_URL}/cotizacion?id=eq.{id_cotizacion}", 
+            json=datos, 
+            headers=headers
+        )
+        response.raise_for_status()
+        return True
+    except requests.exceptions.HTTPError as e:
+        console.print(f"[bold red]Error en la solicitud HTTP: {e}[/bold red]")
+        return False
+    except requests.exceptions.RequestException as e:
+        console.print(f"[bold red]Error en la conexión: {e}[/bold red]")
+        return False
+    except Exception as e:
+        console.print(f"[bold red]Error inesperado: {e}[/bold red]")
+        return False
+
+
+def eliminar_cotizacion(id_cotizacion: int) -> bool:
+    """
+    Elimina una cotización.
+    
+    Args:
+        id_cotizacion (int): ID de la cotización a eliminar.
+        
+    Returns:
+        bool: True si la eliminación fue exitosa, False en caso contrario.
+    """
+    try:
+        response = requests.delete(
+            f"{POSTGREST_URL}/cotizacion?id=eq.{id_cotizacion}", 
+            headers=headers
+        )
+        response.raise_for_status()
+        return True
+    except requests.exceptions.HTTPError as e:
+        console.print(f"[bold red]Error en la solicitud HTTP: {e}[/bold red]")
+        return False
+    except requests.exceptions.RequestException as e:
+        console.print(f"[bold red]Error en la conexión: {e}[/bold red]")
+        return False
+    except Exception as e:
+        console.print(f"[bold red]Error inesperado: {e}[/bold red]")
+        return False
+
+
+def buscar_cotizaciones(termino: str) -> List[Dict]:
+    """
+    Busca cotizaciones que coincidan con el término de búsqueda.
+    
+    Args:
+        termino (str): Término de búsqueda.
+        
+    Returns:
+        List[Dict]: Lista de cotizaciones que coinciden con la búsqueda.
+    """
+    try:
+        # Buscar en varios campos
+        query = f"?or=(numero.ilike.*{termino}*,descripcion.ilike.*{termino}*)"
+        response = requests.get(f"{POSTGREST_URL}/cotizacion{query}", headers=headers)
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.HTTPError as e:
+        console.print(f"[bold red]Error en la solicitud HTTP: {e}[/bold red]")
+        return []
+    except requests.exceptions.RequestException as e:
+        console.print(f"[bold red]Error en la conexión: {e}[/bold red]")
+        return []
+    except Exception as e:
+        console.print(f"[bold red]Error inesperado: {e}[/bold red]")
+        return []
+
+
+def cotizaciones_por_cliente(id_cliente: int, limite: Optional[int] = None) -> List[Dict]:
+    """
+    Obtiene las cotizaciones de un cliente específico.
+    
+    Args:
+        id_cliente (int): ID del cliente.
+        limite (Optional[int]): Límite de resultados a devolver.
+        
+    Returns:
+        List[Dict]: Lista de cotizaciones del cliente.
+    """
+    try:
+        # Construir la URL con el ID del cliente
+        url = f"{POSTGREST_URL}/cotizacion?id_cliente=eq.{id_cliente}"
+        
+        # Agregar límite si se especifica
+        if limite is not None:
+            url += f"&limit={limite}"
+            
+        # Ordenar por fecha de creación descendente
+        url += "&order=fecha.desc"
+        
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.HTTPError as e:
+        console.print(f"[bold red]Error en la solicitud HTTP: {e}[/bold red]")
+        return []
+    except requests.exceptions.RequestException as e:
+        console.print(f"[bold red]Error en la conexión: {e}[/bold red]")
+        return []
+    except Exception as e:
+        console.print(f"[bold red]Error inesperado: {e}[/bold red]")
+        return []
+
+
+def mostrar_tabla_cotizaciones(cotizaciones: List[Dict]) -> None:
+    """
+    Muestra una tabla con las cotizaciones.
+    
+    Args:
+        cotizaciones (List[Dict]): Lista de cotizaciones para mostrar.
+    """
+    if not cotizaciones:
+        console.print("[bold yellow]No se encontraron cotizaciones.[/bold yellow]")
+        return
+        
+    tabla = Table(title="Cotizaciones", show_header=True)
+    tabla.add_column("ID", style="dim")
+    tabla.add_column("Número", style="green")
+    tabla.add_column("Cliente", style="blue")
+    tabla.add_column("Estado", style="magenta")
+    tabla.add_column("Fecha", style="cyan")
+    tabla.add_column("Total", style="yellow", justify="right")
+    
+    for cot in cotizaciones:
+        # Formatear fecha
+        fecha = cot.get("fecha_creacion", "")
+        if fecha:
+            try:
+                fecha_obj = datetime.fromisoformat(fecha.replace("Z", "+00:00"))
+                fecha_form = fecha_obj.strftime("%d/%m/%Y")
+            except (ValueError, TypeError):
+                fecha_form = fecha
+        else:
+            fecha_form = ""
+            
+        # Formatear total
+        total = cot.get("total", 0)
+        total_form = f"{total:,.2f} €" if total is not None else ""
+        
+        tabla.add_row(
+            str(cot.get("id", "")),
+            cot.get("numero", ""),
+            cot.get("cliente_nombre", ""),
+            cot.get("estado", ""),
+            fecha_form,
+            total_form
+        )
+    
+    console.print(tabla)
 
 
 
@@ -60,17 +350,33 @@ def mostrar_cotizaciones(cotizaciones):
 
 def _seleccionar_servicio(id_default: Optional[int] = None) -> int:
     servicios = obtener_servicios()
-    opciones = [f"{s.id}: {s.nombre}" for s in servicios]
+    # Manejar tanto diccionarios como objetos
+    opciones = []
+    for s in servicios:
+        if isinstance(s, dict):
+            # Si es un diccionario, usar .get()
+            id_servicio = s.get("id", "")
+            nombre_servicio = s.get("nombre", "") or s.get("concepto", "")
+        else:
+            # Si es un objeto, usar getattr()
+            id_servicio = getattr(s, "id", "")
+            nombre_servicio = getattr(s, "nombre", "") or getattr(s, "concepto", "")
+        
+        opciones.append(f"{id_servicio}: {nombre_servicio}")
+    
     if not opciones:
         return id_default or 0
+    
     if id_default:
         opciones_default = next((o for o in opciones if o.startswith(str(id_default))), opciones[0])
     else:
         opciones_default = opciones[0]
+    
     opciones.append("Cancelar")
     sel = questionary.select("Seleccione servicio:", choices=opciones, default=opciones_default).ask()
     if sel == "Cancelar":
         return id_default or 0
+    
     return int(sel.split(":")[0])
 
 
@@ -101,36 +407,70 @@ def _preguntar_cliente() -> Optional[int]:
     return cid
 
 
-# --- tasa de cambio helper ---
-def _obtener_tasa(moneda_desde: str, moneda_hasta: str = "DOP") -> float:
-    api_url = os.getenv("API_URL")
-    if not api_url:
-        return 1.0
-    payload = {"desde": moneda_desde, "a": moneda_hasta, "cantidad": 1}
-    try:
-        with spinner("Obteniendo tasa de cambio..."):
-            resp = requests.post(f"{api_url}/divisa", json=payload, timeout=30)
-        resp.raise_for_status()
-        data = resp.json()
-        return float(data.get("resultado", 1))
-    except Exception as e:
-        console.print(f"[bold yellow]No se pudo obtener tasa, usando 1: {e}[/bold yellow]")
-        return 1.0
+
 
 
 def formulario_cotizacion(cotizacion=None) -> Dict:
     """Formulario para crear o actualizar una cotización"""
     es_nuevo = cotizacion is None
 
-    defaults = {
-        "id_cliente": cotizacion.id_cliente if cotizacion else "",
-        "id_proyecto": cotizacion.id_proyecto if cotizacion else "",
-        "id_servicio": cotizacion.id_servicio if cotizacion else "",
-        "moneda": cotizacion.moneda if cotizacion else "RD$",
-        "descripcion": cotizacion.descripcion if cotizacion else "",
-        "estado": cotizacion.estado if cotizacion else "GENERADA",
-        "total": cotizacion.total if cotizacion else 0.0,
-    }
+    # Verificar si cotizacion es un diccionario o un objeto y obtener valores por defecto
+    defaults = {}
+    if cotizacion:
+        if isinstance(cotizacion, dict):
+            # Si es un diccionario, usar .get()
+            defaults = {
+                "id_cliente": cotizacion.get("id_cliente", ""),
+                "id_proyecto": cotizacion.get("id_proyecto", ""),
+                "id_servicio": cotizacion.get("id_servicio", ""),
+                "moneda": cotizacion.get("moneda", "RD$"),
+                "descripcion": cotizacion.get("descripcion", ""),
+                "estado": cotizacion.get("estado", "GENERADA"),
+                "total": cotizacion.get("total", 0.0),
+                "fecha": cotizacion.get("fecha", ""),
+                "tasa_moneda": cotizacion.get("tasa_moneda", 1.0),
+                "tiempo_entrega": cotizacion.get("tiempo_entrega", "3"),
+                "avance": cotizacion.get("avance", "60"),
+                "validez": cotizacion.get("validez", 30),
+                "idioma": cotizacion.get("idioma", "ES"),
+                "descuentop": cotizacion.get("descuentop", 0)
+            }
+        else:
+            # Si es un objeto, usar getattr()
+            defaults = {
+                "id_cliente": getattr(cotizacion, "id_cliente", ""),
+                "id_proyecto": getattr(cotizacion, "id_proyecto", ""),
+                "id_servicio": getattr(cotizacion, "id_servicio", ""),
+                "moneda": getattr(cotizacion, "moneda", "RD$"),
+                "descripcion": getattr(cotizacion, "descripcion", ""),
+                "estado": getattr(cotizacion, "estado", "GENERADA"),
+                "total": getattr(cotizacion, "total", 0.0),
+                "fecha": getattr(cotizacion, "fecha", ""),
+                "tasa_moneda": getattr(cotizacion, "tasa_moneda", 1.0),
+                "tiempo_entrega": getattr(cotizacion, "tiempo_entrega", "3"),
+                "avance": getattr(cotizacion, "avance", "60"),
+                "validez": getattr(cotizacion, "validez", 30),
+                "idioma": getattr(cotizacion, "idioma", "ES"),
+                "descuentop": getattr(cotizacion, "descuentop", 0)
+            }
+    else:
+        # Valores predeterminados para nueva cotización
+        defaults = {
+            "id_cliente": "",
+            "id_proyecto": "",
+            "id_servicio": "",
+            "moneda": "RD$",
+            "descripcion": "",
+            "estado": "GENERADA",
+            "total": 0.0,
+            "fecha": "",
+            "tasa_moneda": 1.0,
+            "tiempo_entrega": "3",
+            "avance": "60",
+            "validez": 30,
+            "idioma": "ES",
+            "descuentop": 0
+        }
 
     cid = _preguntar_cliente() if es_nuevo else defaults["id_cliente"]
     if cid is None:
@@ -143,7 +483,7 @@ def formulario_cotizacion(cotizacion=None) -> Dict:
     ).ask()
 
     # Fecha
-    datos["fecha"] = questionary.text("Fecha (YYYY-MM-DD):", default=getattr(cotizacion, "fecha", "")).ask()
+    datos["fecha"] = questionary.text("Fecha (YYYY-MM-DD):", default=defaults["fecha"]).ask()
 
     # Tasa de cambio
     metodo_tasa = questionary.select(
@@ -152,13 +492,14 @@ def formulario_cotizacion(cotizacion=None) -> Dict:
         default="API",
     ).ask()
     if metodo_tasa == "API":
-        datos["tasa_moneda"] = _obtener_tasa(datos["moneda"].replace("$", ""))
+        datos["tasa_moneda"] = obtener_tasa_divisa("USD", "DOP", 1) or 1.0
     else:
-        tasa_str = questionary.text("Tasa de cambio:", default=str(getattr(cotizacion, "tasa_moneda", 1.0))).ask()
+        tasa_str = questionary.text("Tasa de cambio:", default=str(defaults["tasa_moneda"])).ask()
         try:
             datos["tasa_moneda"] = float(tasa_str)
         except ValueError:
             datos["tasa_moneda"] = 1.0
+
 
     metodo_desc = questionary.select(
         "¿Cómo desea establecer la descripción?",
@@ -181,15 +522,15 @@ def formulario_cotizacion(cotizacion=None) -> Dict:
         "Estado:", choices=["GENERADA", "ENVIADA", "ACEPTADA", "RECHAZADA"], default=defaults["estado"]
     ).ask()
 
-    datos["tiempo_entrega"] = questionary.text("Tiempo de entrega:", default=getattr(cotizacion, "tiempo_entrega", "3")).ask()
-    datos["avance"] = questionary.text("Porcentaje de avance:", default=getattr(cotizacion, "avance", "60")).ask()
-    datos["validez"] = int(questionary.text("Días de validez:", default=str(getattr(cotizacion, "validez", 30))).ask())
+    datos["tiempo_entrega"] = questionary.text("Tiempo de entrega:", default=defaults["tiempo_entrega"]).ask()
+    datos["avance"] = questionary.text("Porcentaje de avance:", default=defaults["avance"]).ask()
+    datos["validez"] = int(questionary.text("Días de validez:", default=str(defaults["validez"])).ask())
     datos["idioma"] = questionary.select(
-        "Idioma:", choices=["ES", "EN"], default=getattr(cotizacion, "idioma", "ES")
+        "Idioma:", choices=["ES", "EN"], default=defaults["idioma"]
     ).ask()
 
     # descuento porcentaje
-    desc_p = questionary.text("Descuento (%):", default=str(getattr(cotizacion, "descuentop", 0))).ask()
+    desc_p = questionary.text("Descuento (%):", default=str(defaults["descuentop"])).ask()
     try:
         datos["descuentop"] = float(desc_p)
     except ValueError:
@@ -216,6 +557,7 @@ def menu_principal():
                 "Crear nueva cotización",
                 "Modificar cotización existente",
                 "Eliminar cotización",
+                "Ver detalles de una cotización",
                 "Volver al menú principal",
             ],
         ).ask()
@@ -232,12 +574,36 @@ def menu_principal():
                 cliente_id = _seleccionar_cliente_por_nombre(termino)
                 if cliente_id:
                     _mostrar_cotis_cliente(cliente_id)
+                    # Después de mostrar, permitir seleccionar cotizacion para ver
+                    id_text = questionary.text("ID de la cotización a ver:").ask()
+                    if id_text:
+                        try:
+                            cid = int(id_text)
+                            cot = obtener_cotizacion(cid)
+                        except ValueError:
+                            cot = None
+                        if cot:
+                            mostrar_cotizacion_detalle(cot)
+                            if questionary.confirm("¿Desea editar esta cotización?", default=False).ask():
+                                datos = formulario_cotizacion(cot)
+                                if datos:
+                                    # Obtener el ID usando getattr para objetos o get para diccionarios
+                                    cot_id = getattr(cot, 'id', None) if not isinstance(cot, dict) else cot.get('id', None)
+                                    if cot_id is not None:
+                                        act = actualizar_cotizacion(cot_id, datos)
+                                    else:
+                                        print("[bold red]No se pudo obtener el ID de la cotización[/bold red]")
+                                        act = False
+                                    if act:
+                                        print("[bold green]Cotización actualizada[/bold green]")
         elif accion == "Crear nueva cotización":
             datos = formulario_cotizacion()
             if datos:
                 nueva = crear_cotizacion(datos)
                 if nueva:
-                    print(f"[bold green]Cotización creada: ID {nueva.id}[/bold green]")
+                    # Obtener el ID usando getattr para objetos o get para diccionarios
+                    nueva_id = getattr(nueva, 'id', None) if not isinstance(nueva, dict) else nueva.get('id', None)
+                    print(f"[bold green]Cotización creada: ID {nueva_id}[/bold green]")
         elif accion == "Modificar cotización existente":
             id_text = questionary.text("ID de la cotización a modificar:").ask()
             if not id_text:
@@ -272,7 +638,20 @@ def menu_principal():
             if questionary.confirm("¿Eliminar cotización?", default=False).ask():
                 if eliminar_cotizacion(id_num):
                     print("[bold green]Cotización eliminada[/bold green]")
-
+        elif accion == "Ver detalles de una cotización":
+            id_text = questionary.text("ID de la cotización a ver:").ask()
+            if not id_text:
+                continue
+            try:
+                id_num = int(id_text)
+            except ValueError:
+                print("[bold red]ID inválido[/bold red]")
+                continue
+            cot = obtener_cotizacion(id_num)
+            if not cot:
+                print("[bold red]No se encontró la cotización[/bold red]")
+                continue
+            mostrar_cotizacion_detalle(cot)
 
 # Subcommand wrappers
 
@@ -296,7 +675,9 @@ def cmd_crear_cotizacion():
     if datos:
         nueva = crear_cotizacion(datos)
         if nueva:
-            print(f"[bold green]Cotización creada: ID {nueva.id}[/bold green]")
+            # Obtener el ID usando getattr para objetos o get para diccionarios
+            nueva_id = getattr(nueva, 'id', None) if not isinstance(nueva, dict) else nueva.get('id', None)
+            print(f"[bold green]Cotización creada: ID {nueva_id}[/bold green]")
 
 
 @cotizacion.command("modificar")
@@ -331,11 +712,26 @@ def _seleccionar_cliente_por_nombre(termino: str) -> Optional[int]:
     if not clientes:
         print("[yellow]No se encontraron clientes[/yellow]")
         return None
-    opciones = [f"{c.id}: {c.nombre}" for c in clientes]
+    
+    # Manejar tanto diccionarios como objetos
+    opciones = []
+    for c in clientes:
+        if isinstance(c, dict):
+            # Si es un diccionario, usar .get()
+            id_cliente = c.get("id", "")
+            nombre_cliente = c.get("nombre", "")
+        else:
+            # Si es un objeto, usar getattr()
+            id_cliente = getattr(c, "id", "")
+            nombre_cliente = getattr(c, "nombre", "")
+        
+        opciones.append(f"{id_cliente}: {nombre_cliente}")
+    
     opciones.append("Cancelar")
     sel = questionary.select("Seleccione un cliente:", choices=opciones).ask()
     if sel == "Cancelar":
         return None
+    
     return int(sel.split(":")[0])
 
 
@@ -352,6 +748,38 @@ def _mostrar_cotis_cliente(id_cliente: int):
         if mas:
             cotis_all = cotizaciones_por_cliente(id_cliente, None)
             mostrar_cotizaciones(cotis_all)
+
+
+def mostrar_cotizacion_detalle(cotizacion):
+    """Muestra los datos completos de una cotización (modelo o dict)"""
+    # Convert model to dict if needed
+    if isinstance(cotizacion, Cotizacion):
+        data = cotizacion.model_dump()
+    else:
+        data = cotizacion
+
+    table = Table(title=f"Cotización ID: {data.get('id')}")
+    table.add_column("Campo", style="cyan")
+    table.add_column("Valor", style="green")
+
+    for k, v in data.items():
+        table.add_row(str(k), str(v))
+
+    console.print(table)
+
+
+# Nuevo comando: Ver detalles de una cotización
+
+
+@cotizacion.command("ver")
+@click.argument("id_cotizacion", type=int)
+def cmd_ver_cotizacion(id_cotizacion):
+    """Ver los datos de una cotización por su ID"""
+    cot = obtener_cotizacion(id_cotizacion)
+    if not cot:
+        print(f"[bold red]No se encontró la cotización con ID {id_cotizacion}[/bold red]")
+        return
+    mostrar_cotizacion_detalle(cot)
 
 
 if __name__ == "__main__":

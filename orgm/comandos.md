@@ -13,6 +13,7 @@ Algunos comandos principales:
 [blue]install[/blue] Instala ORGM CLI.
 [blue]cotizacion[/blue] Gestión de cotizaciones.
 [blue]ai[/blue] Consulta al servicio de IA.
+[blue]docker[/blue] Gestión de imágenes Docker.
 
 Para ayuda detallada:
 [blue]orgm --help[/blue] o [blue]orgm [red]comando[/red] --help[/blue]
@@ -45,5 +46,17 @@ Para ayuda detallada:
 [blue]orgm cotizacion modificar [red]ID[/red][/blue] Modifica una cotización.
 [blue]orgm cotizacion eliminar [red]ID[/red][/blue] Elimina una cotización.
 
-[bold yellow]COMANDO DE IA[/bold yellow]
+[bold yellow]COMANDOS DE IA[/bold yellow]
 [blue]orgm ai [--config CONFIG] "PROMPT"[/blue] Genera texto con IA.
+
+[bold yellow]COMANDOS DE DOCKER[/bold yellow]
+[blue]orgm docker[/blue] Menú interactivo de Docker.
+[blue]orgm docker build[/blue] Construye imagen Docker.
+[blue]orgm docker build_no_cache[/blue] Construye imagen sin caché.
+[blue]orgm docker save[/blue] Guarda imagen en archivo tar.
+[blue]orgm docker push[/blue] Envía imagen al registry.
+[blue]orgm docker tag[/blue] Etiqueta imagen como latest.
+[blue]orgm docker create_prod_context[/blue] Crea contexto prod.
+[blue]orgm docker deploy[/blue] Despliega en contexto prod.
+[blue]orgm docker remove_prod_context[/blue] Elimina contexto prod.
+[blue]orgm docker login[/blue] Inicia sesión en Docker Hub.

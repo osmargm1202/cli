@@ -20,8 +20,12 @@ setup.py
 ./orgm/apps/proyectos.py
 ./orgm/stuff/__init__.py
 ./orgm/stuff/ai.py
+./orgm/stuff/build.sh
+./orgm/stuff/divisa.py
+./orgm/stuff/docker_cli.py
 ./orgm/stuff/logman.py
 ./orgm/stuff/spinner.py
+./orgm/stuff/update.bat
 ./orgm/stuff/variables.py
 orgm/.env.example
 orgm/__init__.py
@@ -48,6 +52,10 @@ orgm/apps/proyectos.py
 orgm/data/logs/log.txt
 orgm/stuff/__init__.py
 orgm/stuff/ai.py
+orgm/stuff/build.sh
+orgm/stuff/divisa.py
+orgm/stuff/docker_cli.py
 orgm/stuff/logman.py
 orgm/stuff/spinner.py
+orgm/stuff/update.bat
 orgm/stuff/variables.py

@@ -6,7 +6,6 @@ from dotenv import load_dotenv
 from rich.console import Console
 from orgm.adm.db import Proyecto, Ubicacion
 from orgm.stuff.ai import generate_project_description
-from orgm.stuff.spinner import spinner
 
 console = Console()
 load_dotenv(override=True)
@@ -46,8 +45,7 @@ if CF_ACCESS_CLIENT_ID and CF_ACCESS_CLIENT_SECRET:
 def obtener_proyectos() -> List[Proyecto]:
     """Obtiene todos los proyectos desde PostgREST"""
     try:
-        with spinner("Obteniendo proyectos..."):
-            response = requests.get(f"{POSTGREST_URL}/proyecto", headers=headers)
+        response = requests.get(f"{POSTGREST_URL}/proyecto", headers=headers, timeout=10)
         response.raise_for_status()
 
         proyectos_data = response.json()
@@ -62,7 +60,7 @@ def obtener_proyecto(id_proyecto: int) -> Optional[Proyecto]:
     """Obtiene un proyecto por su ID"""
     try:
         response = requests.get(
-            f"{POSTGREST_URL}/proyecto?id=eq.{id_proyecto}", headers=headers
+            f"{POSTGREST_URL}/proyecto?id=eq.{id_proyecto}", headers=headers, timeout=10
         )
         response.raise_for_status()
 
@@ -101,7 +99,7 @@ def crear_proyecto(proyecto_data: Dict) -> Optional[Proyecto]:
                 proyecto_data["descripcion"] = descripcion
 
         response = requests.post(
-            f"{POSTGREST_URL}/proyecto", headers=headers, json=proyecto_data
+            f"{POSTGREST_URL}/proyecto", headers=headers, json=proyecto_data, timeout=10
         )
         response.raise_for_status()
 
@@ -140,6 +138,7 @@ def actualizar_proyecto(id_proyecto: int, proyecto_data: Dict) -> Optional[Proye
             f"{POSTGREST_URL}/proyecto?id=eq.{id_proyecto}",
             headers=update_headers,
             json=proyecto_data,
+            timeout=10
         )
         response.raise_for_status()
 
@@ -166,7 +165,7 @@ def eliminar_proyecto(id_proyecto: int) -> bool:
             return False
 
         response = requests.delete(
-            f"{POSTGREST_URL}/proyecto?id=eq.{id_proyecto}", headers=headers
+            f"{POSTGREST_URL}/proyecto?id=eq.{id_proyecto}", headers=headers, timeout=10
         )
         response.raise_for_status()
 
@@ -188,6 +187,7 @@ def buscar_proyectos(termino: str) -> List[Proyecto]:
         response = requests.get(
             f"{POSTGREST_URL}/proyecto?or=(nombre_proyecto.ilike.*{termino}*,descripcion.ilike.*{termino}*,ubicacion.ilike.*{termino}*)",
             headers=headers,
+            timeout=10
         )
         response.raise_for_status()
 
@@ -202,7 +202,7 @@ def buscar_proyectos(termino: str) -> List[Proyecto]:
 def obtener_ubicaciones() -> List[Ubicacion]:
     """Obtiene todas las ubicaciones disponibles"""
     try:
-        response = requests.get(f"{POSTGREST_URL}/ubicacion", headers=headers)
+        response = requests.get(f"{POSTGREST_URL}/ubicacion", headers=headers, timeout=10)
         response.raise_for_status()
 
         ubicaciones_data = response.json()
@@ -219,6 +219,7 @@ def buscar_ubicaciones(termino: str) -> List[Ubicacion]:
         response = requests.get(
             f"{POSTGREST_URL}/ubicacion?or=(provincia.ilike.*{termino}*,distrito.ilike.*{termino}*,distritomunicipal.ilike.*{termino}*)",
             headers=headers,
+            timeout=10
         )
         response.raise_for_status()
 

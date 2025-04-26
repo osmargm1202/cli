@@ -5,19 +5,19 @@ from typing import Dict, List, Optional
 from dotenv import load_dotenv
 from rich.console import Console
 from orgm.adm.db import Cliente
-from orgm.stuff.spinner import spinner
+
+
+
 
 console = Console()
 load_dotenv(override=True)
 
-# Obtener la URL de PostgREST desde las variables de entorno
+# Inicializar estas variables a nivel de módulo
 POSTGREST_URL = os.getenv("POSTGREST_URL")
 if not POSTGREST_URL:
     console.print(
         "[bold red]Error: POSTGREST_URL no está definida en las variables de entorno[/bold red]"
     )
-
-console.print(f"POSTGREST_URL: {POSTGREST_URL}")
 
 # Obtener credenciales de Cloudflare Access
 CF_ACCESS_CLIENT_ID = os.getenv("CF_ACCESS_CLIENT_ID")
@@ -47,12 +47,11 @@ if CF_ACCESS_CLIENT_ID and CF_ACCESS_CLIENT_SECRET:
 def obtener_clientes() -> List[Cliente]:
     """Obtiene todos los clientes desde PostgREST"""
     try:
-        with spinner("Obteniendo clientes..."):
-            response = requests.get(f"{POSTGREST_URL}/cliente", headers=headers)
+        response = requests.get(f"{POSTGREST_URL}/cliente", headers=headers, timeout=10)
         response.raise_for_status()
 
         clientes_data = response.json()
-        clientes = [Cliente.parse_obj(cliente) for cliente in clientes_data]
+        clientes = [Cliente.model_validate(cliente) for cliente in clientes_data]
         return clientes
     except Exception as e:
         console.print(f"[bold red]Error al obtener clientes: {e}[/bold red]")
@@ -63,7 +62,7 @@ def obtener_cliente(id_cliente: int) -> Optional[Cliente]:
     """Obtiene un cliente por su ID"""
     try:
         response = requests.get(
-            f"{POSTGREST_URL}/cliente?id=eq.{id_cliente}", headers=headers
+            f"{POSTGREST_URL}/cliente?id=eq.{id_cliente}", headers=headers, timeout=10
         )
         response.raise_for_status()
 
@@ -74,7 +73,7 @@ def obtener_cliente(id_cliente: int) -> Optional[Cliente]:
             )
             return None
 
-        cliente = Cliente.parse_obj(clientes_data[0])
+        cliente = Cliente.model_validate(clientes_data[0])
         return cliente
     except Exception as e:
         console.print(
@@ -94,11 +93,11 @@ def crear_cliente(cliente_data: Dict) -> Optional[Cliente]:
             return None
 
         response = requests.post(
-            f"{POSTGREST_URL}/cliente", headers=headers, json=cliente_data
+            f"{POSTGREST_URL}/cliente", headers=headers, json=cliente_data, timeout=10
         )
         response.raise_for_status()
 
-        nuevo_cliente = Cliente.parse_obj(response.json()[0])
+        nuevo_cliente = Cliente.model_validate(response.json()[0])
         console.print(
             f"[bold green]Cliente creado correctamente con ID: {nuevo_cliente.id}[/bold green]"
         )
@@ -123,10 +122,11 @@ def actualizar_cliente(id_cliente: int, cliente_data: Dict) -> Optional[Cliente]
             f"{POSTGREST_URL}/cliente?id=eq.{id_cliente}",
             headers=update_headers,
             json=cliente_data,
+            timeout=10
         )
         response.raise_for_status()
 
-        cliente_actualizado = Cliente.parse_obj(response.json()[0])
+        cliente_actualizado = Cliente.model_validate(response.json()[0])
         console.print(
             f"[bold green]Cliente actualizado correctamente: {cliente_actualizado.nombre}[/bold green]"
         )
@@ -138,43 +138,30 @@ def actualizar_cliente(id_cliente: int, cliente_data: Dict) -> Optional[Cliente]
         return None
 
 
-def eliminar_cliente(id_cliente: int) -> bool:
-    """Elimina un cliente existente"""
-    try:
-        # Verificar que el cliente existe
-        cliente_existente = obtener_cliente(id_cliente)
-        if not cliente_existente:
-            return False
 
-        response = requests.delete(
-            f"{POSTGREST_URL}/cliente?id=eq.{id_cliente}", headers=headers
-        )
-        response.raise_for_status()
-
+def buscar_clientes(search_term=None):
+    """
+    Returns the clients that match the search term
+    """
+    env_url = os.environ.get("POSTGREST_URL")
+    if not env_url:
         console.print(
-            f"[bold green]Cliente eliminado correctamente: ID {id_cliente}[/bold green]"
+            "[bold red]No se ha configurado la variable de entorno POSTGREST_URL[/bold red]"
         )
-        return True
-    except Exception as e:
-        console.print(
-            f"[bold red]Error al eliminar cliente {id_cliente}: {e}[/bold red]"
-        )
-        return False
+        return None
 
-
-def buscar_clientes(termino: str) -> List[Cliente]:
-    """Busca clientes por nombre o número"""
+    search_term = search_term or ""
     try:
-        # Usamos el operador ILIKE de PostgreSQL para búsqueda case-insensitive
         response = requests.get(
-            f"{POSTGREST_URL}/cliente?or=(nombre.ilike.*{termino}*,nombre_comercial.ilike.*{termino}*,numero.ilike.*{termino}*)",
+            f"{env_url}/cliente?nombre=ilike.*{search_term}*",
             headers=headers,
+            timeout=10
         )
         response.raise_for_status()
 
         clientes_data = response.json()
-        clientes = [Cliente.parse_obj(cliente) for cliente in clientes_data]
+        clientes = [Cliente.model_validate(cliente) for cliente in clientes_data]
         return clientes
     except Exception as e:
         console.print(f"[bold red]Error al buscar clientes: {e}[/bold red]")
-        return []
+        return None
