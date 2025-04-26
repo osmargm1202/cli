@@ -10,6 +10,7 @@ rich>=13.9.4
 setuptools>=75.3.2
 sqlmodel>=0.0.24
 textual>=0.73.0
+typer>=0.15.2
 
 [test]
 pytest

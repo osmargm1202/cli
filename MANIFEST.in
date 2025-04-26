@@ -2,6 +2,8 @@ include orgm/*.md
 include orgm/*.json
 include orgm/*.txt
 include orgm/*.example
+include orgm/*.sh
+include orgm/*.bat
 include orgm/data/*
 include orgm/stuff/*
 include orgm/adm/*

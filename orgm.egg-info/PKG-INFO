@@ -22,6 +22,7 @@ Requires-Dist: rich>=13.9.4
 Requires-Dist: setuptools>=75.3.2
 Requires-Dist: sqlmodel>=0.0.24
 Requires-Dist: textual>=0.73.0
+Requires-Dist: typer>=0.15.2
 Provides-Extra: test
 Requires-Dist: pytest; extra == "test"
 Dynamic: author-email

@@ -7,6 +7,7 @@ setup.py
 ./orgm/__main__.py
 ./orgm/cli.py
 ./orgm/comandos.md
+./orgm/orgm.py
 ./orgm/adm/__init__.py
 ./orgm/adm/clientes.py
 ./orgm/adm/cotizaciones.py
@@ -32,6 +33,7 @@ orgm/__init__.py
 orgm/__main__.py
 orgm/cli.py
 orgm/comandos.md
+orgm/orgm.py
 orgm.egg-info/PKG-INFO
 orgm.egg-info/SOURCES.txt
 orgm.egg-info/dependency_links.txt
