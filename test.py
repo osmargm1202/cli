@@ -5,6 +5,7 @@ load_dotenv()
 
 POSTGREST_URL = os.getenv("POSTGREST_URL")
 # POSTGREST_URL = "http://10.0.0.13:3006"
+# POSTGREST_URL = "https://sql.orgmapp.com"
 
 CF_ACCESS_CLIENT_ID = os.getenv("CF_ACCESS_CLIENT_ID")
 CF_ACCESS_CLIENT_SECRET = os.getenv("CF_ACCESS_CLIENT_SECRET")
@@ -60,5 +61,6 @@ def buscar_clientes(termino: str) -> list:
 
 
 if __name__ == "__main__":
+    print(POSTGREST_URL)
     print(get_cliente(55))
     print(buscar_clientes("orgm"))

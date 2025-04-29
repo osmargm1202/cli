@@ -15,6 +15,7 @@ from orgm.adm.proyectos import (
     buscar_ubicaciones,
 )
 from orgm.adm.db import Proyecto
+from orgm.stuff.spinner import spinner
 
 console = Console()
 
@@ -60,10 +61,13 @@ def seleccionar_ubicacion() -> Optional[str]:
         if not termino:
             print("[yellow]Búsqueda cancelada[/yellow]")
             return None
-
-        ubicaciones = buscar_ubicaciones(termino)
+        with spinner(f"Buscando ubicaciones por '{termino}'..."):
+            ubicaciones = buscar_ubicaciones(termino)
+    elif metodo_busqueda == "Ver todas las ubicaciones":
+        with spinner("Obteniendo todas las ubicaciones..."):
+            ubicaciones = obtener_ubicaciones()
     else:
-        ubicaciones = obtener_ubicaciones()
+        return None
 
     if not ubicaciones:
         print("[yellow]No se encontraron ubicaciones[/yellow]")
@@ -193,33 +197,38 @@ def menu_principal():
             break
 
         if accion == "Ver todos los proyectos":
-            proyectos = obtener_proyectos()
+            with spinner("Listando proyectos..."):
+                proyectos = obtener_proyectos()
             mostrar_proyectos(proyectos)
 
         elif accion == "Buscar proyectos":
             termino = questionary.text("Término de búsqueda:").ask()
             if termino:
-                proyectos = buscar_proyectos(termino)
+                with spinner(f"Buscando proyectos por '{termino}'..."):
+                    proyectos = buscar_proyectos(termino)
                 mostrar_proyectos(proyectos)
                 if proyectos:
                     opciones = [f"{p.id}: {p.nombre_proyecto}" for p in proyectos] + ["Cancelar"]
                     sel = questionary.select("¿Qué proyecto desea ver?", choices=opciones).ask()
                     if sel != "Cancelar":
                         pid = int(sel.split(":" )[0])
-                        proyecto_sel = obtener_proyecto(pid)
+                        with spinner(f"Obteniendo detalles del proyecto {pid}..."):
+                            proyecto_sel = obtener_proyecto(pid)
                         if proyecto_sel:
                             mostrar_proyecto_detalle(proyecto_sel)
                             if questionary.confirm("¿Desea editar este proyecto?", default=False).ask():
                                 datos = formulario_proyecto(proyecto_sel)
                                 if datos:
-                                    proyecto_actualizado = actualizar_proyecto(pid, datos)
+                                    with spinner(f"Actualizando proyecto {pid}..."):
+                                        proyecto_actualizado = actualizar_proyecto(pid, datos)
                                     if proyecto_actualizado:
                                         print("[bold green]Proyecto actualizado correctamente[/bold green]")
 
         elif accion == "Crear nuevo proyecto":
             datos = formulario_proyecto()
             if datos:
-                nuevo_proyecto = crear_proyecto(datos)
+                with spinner("Creando proyecto..."):
+                    nuevo_proyecto = crear_proyecto(datos)
                 if nuevo_proyecto:
                     print(
                         f"[bold green]Proyecto creado: {nuevo_proyecto.nombre_proyecto}[/bold green]"
@@ -238,10 +247,12 @@ def menu_principal():
             proyecto_a_editar = None
             try:
                 id_num = int(id_proyecto)
-                proyecto_a_editar = obtener_proyecto(id_num)
+                with spinner(f"Obteniendo proyecto {id_num}..."):
+                    proyecto_a_editar = obtener_proyecto(id_num)
             except ValueError:
                 # Es un término de búsqueda
-                proyectos = buscar_proyectos(id_proyecto)
+                with spinner(f"Buscando proyectos por '{id_proyecto}'..."):
+                    proyectos = buscar_proyectos(id_proyecto)
                 mostrar_proyectos(proyectos)
 
                 if not proyectos:
@@ -259,7 +270,8 @@ def menu_principal():
                     continue
 
                 id_seleccionado = int(seleccion.split(":")[0].strip())
-                proyecto_a_editar = obtener_proyecto(id_seleccionado)
+                with spinner(f"Obteniendo proyecto {id_seleccionado}..."):
+                    proyecto_a_editar = obtener_proyecto(id_seleccionado)
 
             if not proyecto_a_editar:
                 print("[bold red]No se encontró el proyecto[/bold red]")
@@ -268,7 +280,8 @@ def menu_principal():
             # Editar el proyecto
             datos = formulario_proyecto(proyecto_a_editar)
             if datos:
-                proyecto_actualizado = actualizar_proyecto(proyecto_a_editar.id, datos)
+                with spinner(f"Actualizando proyecto {proyecto_a_editar.id}..."):
+                    proyecto_actualizado = actualizar_proyecto(proyecto_a_editar.id, datos)
                 if proyecto_actualizado:
                     print(
                         f"[bold green]Proyecto actualizado: {proyecto_actualizado.nombre_proyecto}[/bold green]"
@@ -287,14 +300,16 @@ def menu_principal():
             proyecto_a_eliminar = None
             try:
                 id_num = int(id_proyecto)
-                proyecto_a_eliminar = obtener_proyecto(id_num)
+                with spinner(f"Verificando proyecto {id_num}..."):
+                    proyecto_a_eliminar = obtener_proyecto(id_num)
                 if proyecto_a_eliminar:
                     print(
                         f"Proyecto: {proyecto_a_eliminar.id} - {proyecto_a_eliminar.nombre_proyecto}"
                     )
             except ValueError:
                 # Es un término de búsqueda
-                proyectos = buscar_proyectos(id_proyecto)
+                with spinner(f"Buscando proyectos por '{id_proyecto}'..."):
+                    proyectos = buscar_proyectos(id_proyecto)
                 mostrar_proyectos(proyectos)
 
                 if not proyectos:
@@ -312,7 +327,8 @@ def menu_principal():
                     continue
 
                 id_seleccionado = int(seleccion.split(":")[0].strip())
-                proyecto_a_eliminar = obtener_proyecto(id_seleccionado)
+                with spinner(f"Verificando proyecto {id_seleccionado}..."):
+                    proyecto_a_eliminar = obtener_proyecto(id_seleccionado)
 
             if not proyecto_a_eliminar:
                 print("[bold red]No se encontró el proyecto[/bold red]")
@@ -325,8 +341,9 @@ def menu_principal():
             ).ask()
 
             if confirmar:
-                if eliminar_proyecto(proyecto_a_eliminar.id):
-                    print("[bold green]Proyecto eliminado correctamente[/bold green]")
+                with spinner(f"Eliminando proyecto {proyecto_a_eliminar.id}..."):
+                    if eliminar_proyecto(proyecto_a_eliminar.id):
+                        print("[bold green]Proyecto eliminado correctamente[/bold green]")
 
         elif accion == "Ver detalles de un proyecto":
             id_text = questionary.text("ID del proyecto a ver (o búsqueda):").ask()
@@ -334,10 +351,11 @@ def menu_principal():
                 continue
             try:
                 id_num = int(id_text)
+                with spinner(f"Obteniendo detalles del proyecto {id_num}..."):
+                    proyecto_obj = obtener_proyecto(id_num)
             except ValueError:
-                print("[bold red]ID inválido[/bold red]")
+                print("[bold red]ID inválido.[/bold red]")
                 continue
-            proyecto_obj = obtener_proyecto(id_num)
             if proyecto_obj:
                 mostrar_proyecto_detalle(proyecto_obj)
 
@@ -345,7 +363,8 @@ def menu_principal():
 @proyecto.command("listar")
 def listar_proyectos():
     """Listar todos los proyectos"""
-    proyectos = obtener_proyectos()
+    with spinner("Listando proyectos..."):
+        proyectos = obtener_proyectos()
     mostrar_proyectos(proyectos)
 
 
@@ -353,7 +372,8 @@ def listar_proyectos():
 @click.argument("termino")
 def cmd_buscar_proyectos(termino):
     """Buscar proyectos por término"""
-    proyectos = buscar_proyectos(termino)
+    with spinner(f"Buscando proyectos por '{termino}'..."):
+        proyectos = buscar_proyectos(termino)
     mostrar_proyectos(proyectos)
 
 
@@ -362,7 +382,8 @@ def cmd_crear_proyecto():
     """Crear un nuevo proyecto"""
     datos = formulario_proyecto()
     if datos:
-        nuevo_proyecto = crear_proyecto(datos)
+        with spinner("Creando proyecto..."):
+            nuevo_proyecto = crear_proyecto(datos)
         if nuevo_proyecto:
             print(
                 f"[bold green]Proyecto creado: {nuevo_proyecto.nombre_proyecto}[/bold green]"
@@ -373,14 +394,16 @@ def cmd_crear_proyecto():
 @click.argument("id_proyecto", type=int)
 def cmd_modificar_proyecto(id_proyecto):
     """Modificar un proyecto existente"""
-    proyecto_a_editar = obtener_proyecto(id_proyecto)
+    with spinner(f"Obteniendo proyecto {id_proyecto}..."):
+        proyecto_a_editar = obtener_proyecto(id_proyecto)
     if not proyecto_a_editar:
         print(f"[bold red]No se encontró el proyecto con ID {id_proyecto}[/bold red]")
         return
 
     datos = formulario_proyecto(proyecto_a_editar)
     if datos:
-        proyecto_actualizado = actualizar_proyecto(id_proyecto, datos)
+        with spinner(f"Actualizando proyecto {id_proyecto}..."):
+            proyecto_actualizado = actualizar_proyecto(id_proyecto, datos)
         if proyecto_actualizado:
             print(
                 f"[bold green]Proyecto actualizado: {proyecto_actualizado.nombre_proyecto}[/bold green]"
@@ -391,7 +414,8 @@ def cmd_modificar_proyecto(id_proyecto):
 @click.argument("id_proyecto", type=int)
 def cmd_eliminar_proyecto(id_proyecto):
     """Eliminar un proyecto existente"""
-    proyecto_a_eliminar = obtener_proyecto(id_proyecto)
+    with spinner(f"Verificando proyecto {id_proyecto}..."):
+        proyecto_a_eliminar = obtener_proyecto(id_proyecto)
     if not proyecto_a_eliminar:
         print(f"[bold red]No se encontró el proyecto con ID {id_proyecto}[/bold red]")
         return
@@ -403,8 +427,9 @@ def cmd_eliminar_proyecto(id_proyecto):
     ).ask()
 
     if confirmar:
-        if eliminar_proyecto(id_proyecto):
-            print("[bold green]Proyecto eliminado correctamente[/bold green]")
+        with spinner(f"Eliminando proyecto {id_proyecto}..."):
+            if eliminar_proyecto(id_proyecto):
+                print("[bold green]Proyecto eliminado correctamente[/bold green]")
 
 
 def mostrar_proyecto_detalle(proyecto: Proyecto):
@@ -424,7 +449,8 @@ def mostrar_proyecto_detalle(proyecto: Proyecto):
 @click.argument("id_proyecto", type=int)
 def cmd_ver_proyecto(id_proyecto):
     """Ver los datos de un proyecto por su ID"""
-    proyecto_obj = obtener_proyecto(id_proyecto)
+    with spinner(f"Obteniendo detalles del proyecto {id_proyecto}..."):
+        proyecto_obj = obtener_proyecto(id_proyecto)
     if not proyecto_obj:
         print(f"[bold red]No se encontró el proyecto con ID {id_proyecto}[/bold red]")
         return

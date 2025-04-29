@@ -18,6 +18,7 @@ from orgm.adm.clientes import (
     actualizar_cliente,
     buscar_clientes,
 )
+from orgm.stuff.spinner import spinner
 
 console = Console()
 
@@ -399,39 +400,39 @@ def menu_clientes():
         if accion == "Salir":
             break
         elif accion == "Listar todos los clientes":
-            clientes_list = obtener_clientes()
+            with spinner("Listando clientes..."):
+                clientes_list = obtener_clientes()
             mostrar_tabla_clientes(clientes_list)
         elif accion == "Buscar clientes":
             termino = questionary.text("Ingrese término de búsqueda:").ask()
             if termino:
-                clientes_list = buscar_clientes(termino)
+                with spinner(f"Buscando clientes por '{termino}'..."):
+                    clientes_list = buscar_clientes(termino)
                 mostrar_tabla_clientes(clientes_list)
         elif accion == "Crear nuevo cliente":
             datos = formulario_cliente()
             if datos:
-                # Asumiendo que crear_cliente espera un diccionario
-                nuevo_cliente_obj = crear_cliente(**datos) # Desempaquetar diccionario
+                with spinner("Creando nuevo cliente..."):
+                    nuevo_cliente_obj = crear_cliente(**datos)
                 if nuevo_cliente_obj:
-                    # Asumir que crear_cliente devuelve un objeto Cliente o dict
                     nombre_cliente = getattr(nuevo_cliente_obj, 'nombre', nuevo_cliente_obj.get('nombre', 'N/A'))
                     console.print(f"[bold green]Cliente creado: {nombre_cliente}[/bold green]")
-                    # mostrar_tabla_clientes espera una lista de objetos
                     mostrar_tabla_clientes([nuevo_cliente_obj])
                 else:
-                     console.print("[bold red]No se pudo crear el cliente.[/bold red]")
+                    console.print("[bold red]No se pudo crear el cliente.[/bold red]")
 
         elif accion == "Modificar cliente":
             id_cliente_str = questionary.text("ID del cliente a modificar:").ask()
             if id_cliente_str:
                 try:
                     id_cliente = int(id_cliente_str)
-                    # obtener_cliente devuelve un objeto Cliente
-                    cliente_obj = obtener_cliente(id_cliente)
+                    with spinner(f"Obteniendo datos del cliente {id_cliente}..."):
+                        cliente_obj = obtener_cliente(id_cliente)
                     if cliente_obj:
-                        # Pasar el objeto Cliente a formulario_cliente
                         datos_actualizados = formulario_cliente(cliente_obj)
                         if datos_actualizados:
-                            cliente_actualizado = actualizar_cliente(id_cliente, datos_actualizados)
+                            with spinner(f"Actualizando cliente {id_cliente}..."):
+                                cliente_actualizado = actualizar_cliente(id_cliente, datos_actualizados)
                             if cliente_actualizado:
                                 nombre_actualizado = getattr(cliente_actualizado, "nombre", "N/A")
                                 console.print(f"[bold green]Cliente actualizado: {nombre_actualizado}[/bold green]")
@@ -445,16 +446,17 @@ def menu_clientes():
                 except ValueError:
                     console.print("[bold red]ID inválido, debe ser un número.[/bold red]")
                 except Exception as e:
-                     console.print(f"[bold red]Error inesperado al modificar cliente: {e}[/bold red]")
-                     import traceback
-                     traceback.print_exc() # Para depuración
+                    console.print(f"[bold red]Error inesperado al modificar cliente: {e}[/bold red]")
+                    import traceback
+                    traceback.print_exc() # Para depuración
 
         elif accion == "Ver detalles de cliente":
             id_cliente_str = questionary.text("ID del cliente:").ask()
             if id_cliente_str:
                 try:
                     id_cliente = int(id_cliente_str)
-                    cliente_obj = obtener_cliente(id_cliente)
+                    with spinner(f"Obteniendo detalles del cliente {id_cliente}..."):
+                        cliente_obj = obtener_cliente(id_cliente)
                     if cliente_obj:
                         mostrar_detalle_cliente(cliente_obj)
                     else:
@@ -475,8 +477,8 @@ def clientes(ctx):
 @clientes.command(help="Listar todos los clientes")
 def listar():
     """Comando para listar todos los clientes."""
-    # obtener_clientes devuelve una lista de objetos Cliente
-    lista_clientes = obtener_clientes()
+    with spinner("Listando clientes..."):
+        lista_clientes = obtener_clientes()
     mostrar_tabla_clientes(lista_clientes)
 
 
@@ -485,19 +487,17 @@ def listar():
 @click.option("--json", "formato_json", is_flag=True, help="Mostrar en formato JSON")
 def mostrar(id: int, formato_json: bool):
     """Comando para mostrar detalles de un cliente."""
-    # obtener_cliente devuelve un objeto Cliente
-    cliente_obj = obtener_cliente(id)
+    with spinner(f"Obteniendo detalles del cliente {id}..."):
+        cliente_obj = obtener_cliente(id)
 
     if not cliente_obj:
         console.print(f"[bold red]Cliente con ID {id} no encontrado.[/bold red]")
         return
 
     if formato_json:
-        # formatear_cliente_json espera un objeto o dict
         contenido = formatear_cliente_json(cliente_obj)
         console.print(contenido)
     else:
-        # mostrar_detalle_cliente espera un objeto Cliente
         mostrar_detalle_cliente(cliente_obj)
 
 
@@ -505,18 +505,16 @@ def mostrar(id: int, formato_json: bool):
 @click.argument("termino")
 def buscar(termino: str):
     """Comando para buscar clientes."""
-    # buscar_clientes devuelve una lista de objetos Cliente
-    resultados = buscar_clientes(termino)
+    with spinner(f"Buscando clientes por '{termino}'..."):
+        resultados = buscar_clientes(termino)
     mostrar_tabla_clientes(resultados)
 
 
 @clientes.command(help="Crear un nuevo cliente")
 @click.option("--nombre", required=True, help="Nombre del cliente")
-# Cambiado 'nif' a 'numero' para coincidir con el formulario y modelo
 @click.option("--numero", required=True, help="Número/NIF del cliente") 
-@click.option("--email", help="Email del cliente") # Hacer opcional como en el formulario
-@click.option("--telefono", help="Teléfono del cliente") # Hacer opcional como en el formulario
-# Añadir otros campos del formulario como opciones opcionales
+@click.option("--email", help="Email del cliente")
+@click.option("--telefono", help="Teléfono del cliente")
 @click.option("--nombre-comercial", help="Nombre comercial del cliente")
 @click.option("--direccion", help="Dirección del cliente")
 @click.option("--ciudad", help="Ciudad del cliente")
@@ -527,9 +525,8 @@ def buscar(termino: str):
 @click.option("--celular-representante", help="Celular del representante")
 @click.option("--correo-representante", help="Correo del representante")
 @click.option("--tipo-factura", type=click.Choice(['NCFC', 'NCF']), default='NCFC', help="Tipo de factura")
-def crear(nombre: str, numero: str, **kwargs): # Usar kwargs para los opcionales
+def crear(nombre: str, numero: str, **kwargs):
     """Comando para crear un nuevo cliente."""
-    # Crear diccionario de datos del cliente
     datos_cliente = {
         "nombre": nombre,
         "numero": numero,
@@ -546,23 +543,21 @@ def crear(nombre: str, numero: str, **kwargs): # Usar kwargs para los opcionales
         "correo_representante": kwargs.get("correo_representante"),
         "tipo_factura": kwargs.get("tipo_factura", "NCFC"),
     }
-    # Filtrar valores None para no enviarlos si no se proporcionaron
     datos_cliente = {k: v for k, v in datos_cliente.items() if v is not None}
 
-    # crear_cliente espera un diccionario
-    cliente_obj = crear_cliente(**datos_cliente) # Desempaquetar
+    with spinner("Creando cliente..."):
+        cliente_obj = crear_cliente(**datos_cliente)
 
     if cliente_obj:
         id_cliente = getattr(cliente_obj, 'id', cliente_obj.get('id', 'N/A'))
         console.print(f"[bold green]Cliente creado con éxito. ID: {id_cliente}[/bold green]")
-        mostrar_tabla_clientes([cliente_obj]) # Mostrar el nuevo cliente
+        mostrar_tabla_clientes([cliente_obj])
     else:
         console.print("[bold red]Error al crear el cliente.[/bold red]")
 
 
 @clientes.command(help="Actualizar un cliente existente")
 @click.argument("id", type=int)
-# Usar los nombres de campo correctos y permitir actualizar más campos
 @click.option("--nombre", help="Nuevo nombre del cliente")
 @click.option("--numero", help="Nuevo Número/NIF del cliente")
 @click.option("--nombre-comercial", help="Nuevo nombre comercial")
@@ -579,26 +574,25 @@ def crear(nombre: str, numero: str, **kwargs): # Usar kwargs para los opcionales
 @click.option("--tipo-factura", type=click.Choice(['NCFC', 'NCF']), help="Nuevo tipo de factura")
 def actualizar(id: int, **kwargs):
     """Comando para actualizar un cliente existente."""
-    # Verificar que el cliente existe
-    cliente_existente = obtener_cliente(id)
+    with spinner(f"Verificando cliente {id}..."):
+        cliente_existente = obtener_cliente(id)
     if not cliente_existente:
         console.print(f"[bold red]Cliente con ID {id} no encontrado.[/bold red]")
         return
 
-    # Crear diccionario solo con los datos que se quieren actualizar (no None)
     datos_actualizacion = {k: v for k, v in kwargs.items() if v is not None}
 
     if not datos_actualizacion:
         console.print("[yellow]No se especificaron campos para actualizar.[/yellow]")
         return
 
-    # actualizar_cliente espera ID y diccionario de datos
-    cliente_actualizado_dict = actualizar_cliente(id, datos_actualizacion)
+    with spinner(f"Actualizando cliente {id}..."):
+        cliente_actualizado_dict = actualizar_cliente(id, datos_actualizacion)
 
     if cliente_actualizado_dict:
         console.print(f"[bold green]Cliente actualizado con éxito.[/bold green]")
-        # Mostrar cliente actualizado obteniéndolo de nuevo
-        cliente_obj = obtener_cliente(id)
+        with spinner(f"Obteniendo datos actualizados del cliente {id}..."):
+            cliente_obj = obtener_cliente(id)
         if cliente_obj:
             mostrar_tabla_clientes([cliente_obj])
         else:
@@ -615,15 +609,14 @@ def actualizar(id: int, **kwargs):
 )
 def eliminar(id: int, confirmar: bool):
     """Comando para eliminar un cliente."""
-    # Verificar que el cliente existe (devuelve objeto Cliente)
-    cliente = obtener_cliente(id)
+    with spinner(f"Verificando cliente {id}..."):
+        cliente = obtener_cliente(id)
     if not cliente:
         console.print(f"[bold red]Cliente con ID {id} no encontrado.[/bold red]")
         return
 
-    # Confirmar eliminación
     if not confirmar:
-        nombre_cliente = getattr(cliente, 'nombre', f"ID {id}") # Usar nombre si está disponible
+        nombre_cliente = getattr(cliente, 'nombre', f"ID {id}")
         console.print(
             f"[bold yellow]¿Está seguro de eliminar el cliente {nombre_cliente} (ID: {id})?[/bold yellow]"
         )
@@ -632,8 +625,8 @@ def eliminar(id: int, confirmar: bool):
             console.print("[yellow]Operación cancelada.[/yellow]")
             return
 
-    # Eliminar cliente (la función ya existe y fue añadida)
-    exito = eliminar_cliente(id)
+    with spinner(f"Eliminando cliente {id}..."):
+        exito = eliminar_cliente(id)
 
     if exito:
         console.print(f"[bold green]Cliente eliminado con éxito.[/bold green]")
@@ -648,14 +641,13 @@ def eliminar(id: int, confirmar: bool):
 )
 def exportar(id: int, clipboard: bool):
     """Comando para exportar un cliente a JSON."""
-    # obtener_cliente devuelve objeto Cliente
-    cliente = obtener_cliente(id)
+    with spinner(f"Obteniendo datos del cliente {id} para exportar..."):
+        cliente = obtener_cliente(id)
 
     if not cliente:
         console.print(f"[bold red]Cliente con ID {id} no encontrado.[/bold red]")
         return
 
-    # exportar_cliente espera objeto o dict
     exito, contenido = exportar_cliente(cliente, "json")
 
     if exito:
@@ -665,14 +657,14 @@ def exportar(id: int, clipboard: bool):
                 pyperclip.copy(contenido)
                 console.print("[bold green]Cliente exportado a JSON y copiado al portapapeles.[/bold green]")
             except ImportError:
-                 console.print("[bold yellow]La funcionalidad de portapapeles requiere la librería 'pyperclip'.[/bold yellow]")
-                 console.print("[bold yellow]Instálala con: pip install pyperclip[/bold yellow]")
-                 console.print("\nContenido JSON:")
-                 console.print(contenido)
+                console.print("[bold yellow]La funcionalidad de portapapeles requiere la librería 'pyperclip'.[/bold yellow]")
+                console.print("[bold yellow]Instálala con: pip install pyperclip[/bold yellow]")
+                console.print("\nContenido JSON:")
+                console.print(contenido)
             except Exception as e:
-                 console.print(f"[bold red]Error al copiar al portapapeles: {e}[/bold red]")
-                 console.print("\nContenido JSON:")
-                 console.print(contenido)
+                console.print(f"[bold red]Error al copiar al portapapeles: {e}[/bold red]")
+                console.print("\nContenido JSON:")
+                console.print(contenido)
 
         else:
             console.print(contenido)

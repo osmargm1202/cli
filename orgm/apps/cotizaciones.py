@@ -1,16 +1,18 @@
 import click
 import questionary
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 from rich.console import Console
 from rich.table import Table
 from rich import print
-from orgm.stuff.divisa import obtener_tasa_divisa
+from orgm.apis.divisa import obtener_tasa_divisa
 from orgm.adm.servicios import obtener_servicios
 from orgm.stuff.ai import generate_project_description
 import os, requests
 from orgm.adm.clientes import buscar_clientes
 from orgm.adm.cotizaciones import cotizaciones_por_cliente
+from orgm.adm.proyectos import buscar_proyectos, Proyecto
 from orgm.adm.db import Cotizacion
+from orgm.stuff.spinner import spinner
 
 console = Console()
 
@@ -69,7 +71,12 @@ def obtener_cotizaciones() -> List[Dict]:
         List[Dict]: Lista de cotizaciones.
     """
     try:
-        response = requests.get(f"{POSTGREST_URL}/cotizacion", headers=headers)
+        # Seleccionar todos los campos de cotizacion y campos específicos de cliente/proyecto
+        select_query = "select=*,cliente(id,nombre),proyecto(id,nombre_proyecto)"
+        # Ordenar por fecha descendente para mostrar las más recientes primero
+        url = f"{POSTGREST_URL}/cotizacion?{select_query}&order=fecha.desc"
+        with spinner("Obteniendo todas las cotizaciones..."):
+            response = requests.get(url, headers=headers)
         response.raise_for_status()
         return response.json()
     except requests.exceptions.HTTPError as e:
@@ -94,9 +101,10 @@ def obtener_cotizacion(id_cotizacion: int) -> Optional[Dict]:
         Optional[Dict]: Datos de la cotización o None si no se encuentra.
     """
     try:
-        response = requests.get(
-            f"{POSTGREST_URL}/cotizacion?id=eq.{id_cotizacion}", headers=headers
-        )
+        select_query = "select=*,cliente(id,nombre),proyecto(id,nombre_proyecto)"
+        url = f"{POSTGREST_URL}/cotizacion?id=eq.{id_cotizacion}&{select_query}"
+        with spinner(f"Obteniendo cotización ID: {id_cotizacion}..."):
+            response = requests.get(url, headers=headers)
         response.raise_for_status()
         result = response.json()
         return result[0] if result else None
@@ -126,7 +134,8 @@ def crear_cotizacion(datos: Dict) -> Optional[Dict]:
         if "fecha_creacion" not in datos:
             datos["fecha_creacion"] = datetime.now().isoformat()
             
-        response = requests.post(f"{POSTGREST_URL}/cotizacion", json=datos, headers=headers)
+        with spinner("Creando nueva cotización..."):
+            response = requests.post(f"{POSTGREST_URL}/cotizacion", json=datos, headers=headers)
         response.raise_for_status()
         return response.json()[0] if response.json() else None
     except requests.exceptions.HTTPError as e:
@@ -156,11 +165,12 @@ def actualizar_cotizacion(id_cotizacion: int, datos: Dict) -> bool:
         if "id" in datos:
             del datos["id"]
             
-        response = requests.patch(
-            f"{POSTGREST_URL}/cotizacion?id=eq.{id_cotizacion}", 
-            json=datos, 
-            headers=headers
-        )
+        with spinner(f"Actualizando cotización ID: {id_cotizacion}..."):
+            response = requests.patch(
+                f"{POSTGREST_URL}/cotizacion?id=eq.{id_cotizacion}", 
+                json=datos, 
+                headers=headers
+            )
         response.raise_for_status()
         return True
     except requests.exceptions.HTTPError as e:
@@ -185,10 +195,11 @@ def eliminar_cotizacion(id_cotizacion: int) -> bool:
         bool: True si la eliminación fue exitosa, False en caso contrario.
     """
     try:
-        response = requests.delete(
-            f"{POSTGREST_URL}/cotizacion?id=eq.{id_cotizacion}", 
-            headers=headers
-        )
+        with spinner(f"Eliminando cotización ID: {id_cotizacion}..."):
+            response = requests.delete(
+                f"{POSTGREST_URL}/cotizacion?id=eq.{id_cotizacion}", 
+                headers=headers
+            )
         response.raise_for_status()
         return True
     except requests.exceptions.HTTPError as e:
@@ -241,8 +252,10 @@ def cotizaciones_por_cliente(id_cliente: int, limite: Optional[int] = None) -> L
         List[Dict]: Lista de cotizaciones del cliente.
     """
     try:
-        # Construir la URL con el ID del cliente
-        url = f"{POSTGREST_URL}/cotizacion?id_cliente=eq.{id_cliente}"
+        # Seleccionar todos los campos de cotizacion y campos específicos de cliente/proyecto
+        select_query = "select=*,cliente(id,nombre),proyecto(id,nombre_proyecto)"
+        # Construir la URL con el ID del cliente y el select
+        url = f"{POSTGREST_URL}/cotizacion?id_cliente=eq.{id_cliente}&{select_query}"
         
         # Agregar límite si se especifica
         if limite is not None:
@@ -251,7 +264,8 @@ def cotizaciones_por_cliente(id_cliente: int, limite: Optional[int] = None) -> L
         # Ordenar por fecha de creación descendente
         url += "&order=fecha.desc"
         
-        response = requests.get(url, headers=headers)
+        with spinner(f"Obteniendo cotizaciones del cliente ID: {id_cliente}..."):
+            response = requests.get(url, headers=headers)
         response.raise_for_status()
         return response.json()
     except requests.exceptions.HTTPError as e:
@@ -349,7 +363,8 @@ def mostrar_cotizaciones(cotizaciones):
 
 
 def _seleccionar_servicio(id_default: Optional[int] = None) -> int:
-    servicios = obtener_servicios()
+    with spinner("Obteniendo lista de servicios..."):
+        servicios = obtener_servicios()
     # Manejar tanto diccionarios como objetos
     opciones = []
     for s in servicios:
@@ -405,8 +420,6 @@ def _preguntar_cliente() -> Optional[int]:
 
     _ultimo_cliente_id = cid
     return cid
-
-
 
 
 
@@ -492,7 +505,9 @@ def formulario_cotizacion(cotizacion=None) -> Dict:
         default="API",
     ).ask()
     if metodo_tasa == "API":
-        datos["tasa_moneda"] = obtener_tasa_divisa("USD", "DOP", 1) or 1.0
+        with spinner("Obteniendo tasa de cambio USD->DOP..."):
+            tasa = obtener_tasa_divisa("USD", "DOP", 1)
+        datos["tasa_moneda"] = tasa or 1.0
     else:
         tasa_str = questionary.text("Tasa de cambio:", default=str(defaults["tasa_moneda"])).ask()
         try:
@@ -513,7 +528,8 @@ def formulario_cotizacion(cotizacion=None) -> Dict:
     else:
         prompt = questionary.text("Prompt para generar descripción:").ask()
         if prompt:
-            desc = generate_project_description(prompt)
+            with spinner("Generando descripción con IA..."):
+                desc = generate_project_description(prompt)
             datos["descripcion"] = desc or ""
         else:
             datos["descripcion"] = defaults["descripcion"]
@@ -553,7 +569,7 @@ def menu_principal():
             "¿Qué desea hacer?",
             choices=[
                 "Ver todas las cotizaciones",
-                "Buscar cotizaciones",
+                "Buscar cotizaciones (por Cliente o Proyecto)",
                 "Crear nueva cotización",
                 "Modificar cotización existente",
                 "Eliminar cotización",
@@ -568,34 +584,71 @@ def menu_principal():
         if accion == "Ver todas las cotizaciones":
             cotizaciones = obtener_cotizaciones()
             mostrar_cotizaciones(cotizaciones)
-        elif accion == "Buscar cotizaciones":
-            termino = questionary.text("Nombre del cliente a buscar:").ask()
-            if termino:
-                cliente_id = _seleccionar_cliente_por_nombre(termino)
-                if cliente_id:
-                    _mostrar_cotis_cliente(cliente_id)
-                    # Después de mostrar, permitir seleccionar cotizacion para ver
-                    id_text = questionary.text("ID de la cotización a ver:").ask()
-                    if id_text:
-                        try:
-                            cid = int(id_text)
-                            cot = obtener_cotizacion(cid)
-                        except ValueError:
-                            cot = None
-                        if cot:
-                            mostrar_cotizacion_detalle(cot)
-                            if questionary.confirm("¿Desea editar esta cotización?", default=False).ask():
-                                datos = formulario_cotizacion(cot)
-                                if datos:
-                                    # Obtener el ID usando getattr para objetos o get para diccionarios
-                                    cot_id = getattr(cot, 'id', None) if not isinstance(cot, dict) else cot.get('id', None)
-                                    if cot_id is not None:
-                                        act = actualizar_cotizacion(cot_id, datos)
-                                    else:
-                                        print("[bold red]No se pudo obtener el ID de la cotización[/bold red]")
-                                        act = False
-                                    if act:
-                                        print("[bold green]Cotización actualizada[/bold green]")
+        elif accion == "Buscar cotizaciones (por Cliente o Proyecto)":
+            tipo_busqueda = questionary.select(
+                "¿Buscar por Cliente o Proyecto?",
+                choices=["Cliente", "Proyecto", "Cancelar"]
+            ).ask()
+
+            if tipo_busqueda == "Cliente":
+                termino = questionary.text("Nombre del cliente a buscar:").ask()
+                if termino:
+                    cliente_id = _seleccionar_cliente_por_nombre(termino)
+                    if cliente_id:
+                        _mostrar_cotis_cliente(cliente_id)
+                        # Opción para ver/editar una cotización específica
+                        id_text = questionary.text("ID de la cotización a ver/editar (dejar en blanco para continuar):").ask()
+                        if id_text:
+                            try:
+                                cid = int(id_text)
+                                cot = obtener_cotizacion(cid)
+                            except ValueError:
+                                cot = None
+                            if cot:
+                                mostrar_cotizacion_detalle(cot)
+                                if questionary.confirm("¿Desea editar esta cotización?", default=False).ask():
+                                    datos = formulario_cotizacion(cot)
+                                    if datos:
+                                        cot_id = getattr(cot, 'id', None) if not isinstance(cot, dict) else cot.get('id', None)
+                                        if cot_id is not None:
+                                            act = actualizar_cotizacion(cot_id, datos)
+                                            if act:
+                                                print("[bold green]Cotización actualizada[/bold green]")
+                                        else:
+                                            print("[bold red]No se pudo obtener el ID de la cotización[/bold red]")
+
+            elif tipo_busqueda == "Proyecto":
+                termino_proyecto = questionary.text("Nombre o término del proyecto a buscar:").ask()
+                if termino_proyecto:
+                    proyecto_id = _seleccionar_proyecto_por_nombre(termino_proyecto)
+                    if proyecto_id:
+                        _mostrar_cotis_proyecto(proyecto_id)
+                        # Opción para ver/editar una cotización específica después de mostrar
+                        id_text = questionary.text("ID de la cotización a ver/editar (dejar en blanco para continuar):").ask()
+                        if id_text:
+                            try:
+                                cid = int(id_text)
+                                # Validar que la cotización pertenece al proyecto buscado?
+                                # Por ahora, se asume que el usuario introduce un ID válido de la lista mostrada
+                                cot = obtener_cotizacion(cid)
+                            except ValueError:
+                                cot = None
+                            if cot:
+                                mostrar_cotizacion_detalle(cot)
+                                if questionary.confirm("¿Desea editar esta cotización?", default=False).ask():
+                                    datos = formulario_cotizacion(cot)
+                                    if datos:
+                                        cot_id = getattr(cot, 'id', None) if not isinstance(cot, dict) else cot.get('id', None)
+                                        if cot_id is not None:
+                                            act = actualizar_cotizacion(cot_id, datos)
+                                            if act:
+                                                print("[bold green]Cotización actualizada[/bold green]")
+                                        else:
+                                            print("[bold red]No se pudo obtener el ID de la cotización[/bold red]")
+                    # Si proyecto_id es None, _seleccionar_proyecto_por_nombre ya mostró mensaje
+
+            # Si tipo_busqueda es "Cancelar", no hace nada y vuelve al menú.
+
         elif accion == "Crear nueva cotización":
             datos = formulario_cotizacion()
             if datos:
@@ -708,7 +761,8 @@ def cmd_eliminar_cotizacion(id_cotizacion):
 
 # --- helper para seleccionar cliente ---
 def _seleccionar_cliente_por_nombre(termino: str) -> Optional[int]:
-    clientes = buscar_clientes(termino)
+    with spinner(f"Buscando clientes por '{termino}'..."):
+        clientes = buscar_clientes(termino)
     if not clientes:
         print("[yellow]No se encontraron clientes[/yellow]")
         return None
@@ -780,6 +834,120 @@ def cmd_ver_cotizacion(id_cotizacion):
         print(f"[bold red]No se encontró la cotización con ID {id_cotizacion}[/bold red]")
         return
     mostrar_cotizacion_detalle(cot)
+
+
+def cotizaciones_por_proyecto(id_proyecto: int, limite: Optional[int] = None) -> List[Dict]:
+    """
+    Obtiene las cotizaciones de un proyecto específico.
+    
+    Args:
+        id_proyecto (int): ID del proyecto.
+        limite (Optional[int]): Límite de resultados a devolver.
+        
+    Returns:
+        List[Dict]: Lista de cotizaciones del proyecto.
+    """
+    try:
+        # Seleccionar todos los campos de cotizacion, y campos específicos de cliente y proyecto
+        select_query = "select=*,cliente(id,nombre),proyecto(id,nombre_proyecto)"
+        url = f"{POSTGREST_URL}/cotizacion?id_proyecto=eq.{id_proyecto}&{select_query}"
+        
+        # Agregar límite si se especifica
+        if limite is not None:
+            url += f"&limit={limite}"
+            
+        # Ordenar por fecha de creación descendente
+        url += "&order=fecha.desc"
+        
+        with spinner(f"Obteniendo cotizaciones del proyecto ID: {id_proyecto}..."):
+            response = requests.get(url, headers=headers)
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.HTTPError as e:
+        console.print(f"[bold red]Error en la solicitud HTTP: {e}[/bold red]")
+        return []
+    except requests.exceptions.RequestException as e:
+        console.print(f"[bold red]Error en la conexión: {e}[/bold red]")
+        return []
+    except Exception as e:
+        console.print(f"[bold red]Error inesperado: {e}[/bold red]")
+        return []
+
+
+def _mostrar_cotis_proyecto(id_proyecto: int):
+    """Obtiene y muestra las cotizaciones para un ID de proyecto específico."""
+    cotis = cotizaciones_por_proyecto(id_proyecto, 10)
+    if not cotis:
+        print("[yellow]No hay cotizaciones para este proyecto[/yellow]")
+        return
+    mostrar_cotizaciones(cotis)
+    # verificar si hay más de 10
+    if len(cotis) == 10:
+        # Hacer una consulta para contar total? Mejor obtener todas si confirma
+        mas = questionary.confirm("¿Mostrar más cotizaciones?", default=False).ask()
+        if mas:
+            cotis_all = cotizaciones_por_proyecto(id_proyecto, None) # Obtener todas
+            mostrar_cotizaciones(cotis_all)
+
+
+# --- helper para seleccionar proyecto ---
+def _seleccionar_proyecto_por_nombre(termino: str) -> Optional[int]:
+    """Busca proyectos por nombre y permite al usuario seleccionar uno."""
+    with spinner(f"Buscando proyectos por '{termino}'..."):
+        proyectos: List[Proyecto] = buscar_proyectos(termino)
+    if not proyectos:
+        print("[yellow]No se encontraron proyectos[/yellow]")
+        return None
+    
+    # Manejar tanto diccionarios como objetos (aunque buscar_proyectos devuelve Proyecto)
+    opciones = []
+    for p in proyectos:
+        if isinstance(p, Proyecto): # Verificar si es instancia de Proyecto
+            id_proyecto = p.id
+            nombre_proyecto = p.nombre_proyecto
+            opciones.append(f"{id_proyecto}: {nombre_proyecto}")
+        elif isinstance(p, dict): # Fallback por si acaso
+            id_proyecto = p.get("id", "")
+            nombre_proyecto = p.get("nombre_proyecto", "")
+            opciones.append(f"{id_proyecto}: {nombre_proyecto}")
+        # Ignorar otros tipos si los hubiera
+    
+    if not opciones:
+         print("[yellow]No se encontraron proyectos válidos[/yellow]")
+         return None
+
+    opciones.append("Buscar de nuevo")
+    opciones.append("Cancelar")
+
+    while True:
+        sel = questionary.select("Seleccione un proyecto:", choices=opciones).ask()
+        
+        if sel == "Cancelar":
+            return None
+        elif sel == "Buscar de nuevo":
+            nuevo_termino = questionary.text("Nuevo término de búsqueda:").ask()
+            if not nuevo_termino:
+                return None # Cancelar si no ingresa nuevo término
+            with spinner(f"Buscando proyectos por '{nuevo_termino}'..."):
+                proyectos = buscar_proyectos(nuevo_termino)
+            if not proyectos:
+                print("[yellow]No se encontraron proyectos[/yellow]")
+                # Podríamos preguntar si quiere intentar de nuevo o cancelar
+                if not questionary.confirm("¿Intentar buscar de nuevo?", default=True).ask():
+                    return None
+                continue # Volver a pedir término
+            # Actualizar opciones si se encontraron proyectos
+            opciones = [f"{p.id}: {p.nombre_proyecto}" for p in proyectos if isinstance(p, Proyecto)]
+            opciones.append("Buscar de nuevo")
+            opciones.append("Cancelar")
+            continue # Mostrar nueva lista
+        else:
+            # Seleccionó un proyecto
+            try:
+                return int(sel.split(":")[0])
+            except (ValueError, IndexError):
+                print("[red]Selección inválida[/red]")
+                # Volver a mostrar la lista actual
 
 
 if __name__ == "__main__":

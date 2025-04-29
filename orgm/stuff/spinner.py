@@ -38,7 +38,7 @@ def spinner(message: str = "Cargando..."):
     # Primer (y único) spinner activo
     _spinner_counter += 1
     try:
-        with console.status(f"[cyan]{message}", spinner="dots"):
+        with console.status(f"[blue]{message}", spinner="dots"):
             yield
     finally:
         _spinner_counter -= 1

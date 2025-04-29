@@ -1,2 +1,2 @@
 [console_scripts]
-orgm = orgm.cli:cli
+orgm = orgm.orgm:main
