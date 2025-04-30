@@ -17,6 +17,7 @@ def menu_principal():
         {"name": "🧩 Clientes", "value": "client"},
         {"name": "📋 Proyectos", "value": "project"},
         {"name": "💰 Cotizaciones", "value": "quotation"},
+        {"name": "💵 Pagos", "value": "payment"},
         {"name": "🐳 Docker", "value": "docker"},
         {"name": "🔑 Variables de entorno", "value": "env"},
         {"name": "📄 Operaciones PDF", "value": "pdf"},
@@ -85,23 +86,19 @@ def menu_principal():
 
 def mostrar_ayuda():
     """Muestra el contenido del archivo comandos.md"""
-    # Determinar la ruta del archivo comandos.md relativo al directorio del proyecto
-    script_dir = Path(__file__).parent.parent  # orgm/commands -> orgm/
-    comandos_md_path = script_dir / "comandos.md"
-    
-    if comandos_md_path.is_file():
-        try:
-            with open(comandos_md_path, "r", encoding="utf-8") as f:
-                contenido_md = f.read()
-                # Usar la consola de Rich para imprimir el contenido
-                console.print(contenido_md)
-                
-            # Esperar a que el usuario presione Enter para continuar
-            input("\nPresione Enter para volver al menú...")
-        except Exception as e:
-            console.print(f"[bold red]Error al leer {comandos_md_path}: {e}[/bold red]")
-    else:
-        console.print(f"[bold yellow]Advertencia: No se encontró el archivo de ayuda {comandos_md_path}[/bold yellow]")
+    try:
+        # Obtener la ruta del script actual
+        script_dir = Path(__file__).parent
+        # Construir la ruta al archivo comandos.md (está en el directorio principal de orgm)
+        orgm_dir = script_dir.parent # Subir un nivel desde 'commands' a 'orgm'
+        comandos_path = orgm_dir / "comandos.md"
+        
+        # Leer y mostrar el archivo
+        with open(comandos_path, "r", encoding="utf-8") as f:
+            contenido = f.read()
+        console.print(contenido)
+    except Exception as e:
+        console.print(f"[bold red]Error al mostrar la ayuda: {e}[/bold red]")
 
 if __name__ == "__main__":
     # Para pruebas

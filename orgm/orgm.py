@@ -23,6 +23,7 @@ from orgm.commands.base import check_urls, update, install
 from orgm.commands.env import env_edit, env_file
 from orgm.commands.pdf import pdf_firmar, pdf_firmar_interactivo
 from orgm.commands.ai import ai_prompt, ai_configs, ai_config_upload, ai_config_create, ai_config_edit
+from orgm.commands.pago import pago_registrar_command, pago_listar_command, pago_asignar_command
 
 # Nuevos comandos API
 from orgm.commands.rnc import buscar_empresa_command
@@ -35,6 +36,7 @@ from orgm.commands.menu import menu_principal
 from orgm.apps.env_app import env_menu
 from orgm.apps.pdf_app import pdf_menu
 from orgm.apps.ai_app import ai_menu
+from orgm.apps.pago_app import pago_menu
 
 # Crear consola para salida con Rich
 console = Console()
@@ -59,12 +61,14 @@ class OrgmCLI:
         self.env_app = typer.Typer(help="Administrar variables de entorno")
         self.pdf_app = typer.Typer(help="Operaciones con archivos PDF")
         self.ai_app = typer.Typer(help="Operaciones relacionadas con la IA")
+        self.pago_app = typer.Typer(help="Gestión de pagos y asignaciones")
         # No necesitamos typer apps para clientes, proyectos, etc., ya que son grupos de click
         
         # Configurar subcomandos
         self.app.add_typer(self.env_app, name="env")
         self.app.add_typer(self.pdf_app, name="pdf")
         self.app.add_typer(self.ai_app, name="ai")
+        self.app.add_typer(self.pago_app, name="payment")
         # Añadir los grupos de comandos de las aplicaciones usando add_typer
         self.app.add_typer(clientes_app, name="client")
         self.app.add_typer(proyecto_app, name="project")
@@ -101,6 +105,9 @@ class OrgmCLI:
                         continue
                     elif resultado == "ai":
                         self.ejecutar_submenu(ai_menu)
+                        continue
+                    elif resultado == "payment":
+                        self.ejecutar_submenu(pago_menu)
                         continue
                     
                     # Ejecutar el comando seleccionado en el menú
@@ -177,6 +184,11 @@ class OrgmCLI:
         self.ai_app.command(name="upload")(ai_config_upload)
         self.ai_app.command(name="create")(ai_config_create)
         self.ai_app.command(name="edit")(ai_config_edit)
+        
+        # Comandos de Pagos - Use imported functions
+        self.pago_app.command(name="register")(pago_registrar_command)
+        self.pago_app.command(name="list")(pago_listar_command)
+        self.pago_app.command(name="assign")(pago_asignar_command)
 
 # Inicializar y ejecutar la CLI 
 def main():

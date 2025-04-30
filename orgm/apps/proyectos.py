@@ -203,7 +203,7 @@ def menu_principal():
                 return menu_principal()
             except ImportError:
                 # Si no se puede importar, simplemente salimos
-                break
+            break
 
         if accion == "Ver todos los proyectos":
             with spinner("Listando proyectos..."):
