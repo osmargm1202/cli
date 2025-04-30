@@ -2,52 +2,40 @@
 # NUEVO ARCHIVO: orgm/adm/cotizaciones.py
 # Funciones para acceder a PostgREST relacionadas con las cotizaciones
 
-import json
-import os
-from datetime import datetime
 from typing import Dict, List, Optional, Union
-
-import requests
-import click
-from dotenv import load_dotenv
 from rich.console import Console
-from rich.table import Table
-from orgm.adm.db import Cotizacion
+from orgm.adm.db import Cotizacion  # Importación a nivel de módulo para que otros módulos puedan acceder
 
 console = Console()
-load_dotenv(override=True)
 
-# Obtener la URL de PostgREST desde las variables de entorno
-POSTGREST_URL = os.getenv("POSTGREST_URL")
-if not POSTGREST_URL:
-    console.print(
-        "[bold red]Error: POSTGREST_URL no está definida en las variables de entorno[/bold red]"
-    )
-    exit(1)
+# Inicializar variables como None a nivel de módulo
+POSTGREST_URL = None
+headers = None
 
-# Obtener credenciales de Cloudflare Access
-CF_ACCESS_CLIENT_ID = os.getenv("CF_ACCESS_CLIENT_ID")
-CF_ACCESS_CLIENT_SECRET = os.getenv("CF_ACCESS_CLIENT_SECRET")
-
-if not all([CF_ACCESS_CLIENT_ID, CF_ACCESS_CLIENT_SECRET]):
-    console.print(
-        "[bold yellow]Advertencia: CF_ACCESS_CLIENT_ID o CF_ACCESS_CLIENT_SECRET no están definidas en las variables de entorno.[/bold yellow]"
-    )
-    console.print(
-        "[bold yellow]Las consultas no incluirán autenticación de Cloudflare Access.[/bold yellow]"
-    )
-
-# Configuración de los headers para PostgREST
-headers = {
-    "Content-Type": "application/json",
-    "Accept": "application/json",
-    "Prefer": "return=representation",
-}
-
-# Agregar headers de Cloudflare Access si están disponibles
-if CF_ACCESS_CLIENT_ID and CF_ACCESS_CLIENT_SECRET:
-    headers["CF-Access-Client-Id"] = CF_ACCESS_CLIENT_ID
-    headers["CF-Access-Client-Secret"] = CF_ACCESS_CLIENT_SECRET
+def initialize():
+    """Inicializa las variables que anteriormente estaban a nivel de módulo"""
+    global POSTGREST_URL, headers
+    
+    import os
+    from dotenv import load_dotenv
+    from orgm.apis.header import get_headers_json
+    
+    load_dotenv(override=True)
+    
+    # Obtener URL de PostgREST
+    POSTGREST_URL = os.getenv("POSTGREST_URL")
+    if not POSTGREST_URL:
+        console.print(
+            "[bold red]Error: POSTGREST_URL no está definida en las variables de entorno[/bold red]"
+        )
+        return False
+    
+    # Obtener headers usando la función centralizada
+    headers = get_headers_json()
+    # Añadir header adicional para PostgREST
+    headers["Prefer"] = "return=representation"
+    
+    return True
 
 
 def obtener_cotizaciones() -> List[Dict]:
@@ -57,6 +45,12 @@ def obtener_cotizaciones() -> List[Dict]:
     Returns:
         List[Dict]: Lista de cotizaciones.
     """
+    # Asegurar que las variables estén inicializadas
+    if headers is None:
+        initialize()
+    
+    import requests
+    
     try:
         response = requests.get(f"{POSTGREST_URL}/cotizacion", headers=headers)
         response.raise_for_status()
@@ -82,6 +76,12 @@ def obtener_cotizacion(id_cotizacion: int) -> Optional[Dict]:
     Returns:
         Optional[Dict]: Datos de la cotización o None si no se encuentra.
     """
+    # Asegurar que las variables estén inicializadas
+    if headers is None:
+        initialize()
+    
+    import requests
+    
     try:
         response = requests.get(
             f"{POSTGREST_URL}/cotizacion?id=eq.{id_cotizacion}", headers=headers
@@ -110,6 +110,13 @@ def crear_cotizacion(datos: Dict) -> Optional[Dict]:
     Returns:
         Optional[Dict]: Cotización creada o None si falla.
     """
+    # Asegurar que las variables estén inicializadas
+    if headers is None:
+        initialize()
+    
+    import requests
+    from datetime import datetime
+    
     try:
         # Asegurar que tenga fecha de creación
         if "fecha_creacion" not in datos:
@@ -140,6 +147,12 @@ def actualizar_cotizacion(id_cotizacion: int, datos: Dict) -> bool:
     Returns:
         bool: True si la actualización fue exitosa, False en caso contrario.
     """
+    # Asegurar que las variables estén inicializadas
+    if headers is None:
+        initialize()
+    
+    import requests
+    
     try:
         # Remover id si está en los datos para evitar conflictos
         if "id" in datos:
@@ -173,6 +186,12 @@ def eliminar_cotizacion(id_cotizacion: int) -> bool:
     Returns:
         bool: True si la eliminación fue exitosa, False en caso contrario.
     """
+    # Asegurar que las variables estén inicializadas
+    if headers is None:
+        initialize()
+    
+    import requests
+    
     try:
         response = requests.delete(
             f"{POSTGREST_URL}/cotizacion?id=eq.{id_cotizacion}", 
@@ -201,6 +220,12 @@ def buscar_cotizaciones(termino: str) -> List[Dict]:
     Returns:
         List[Dict]: Lista de cotizaciones que coinciden con la búsqueda.
     """
+    # Asegurar que las variables estén inicializadas
+    if headers is None:
+        initialize()
+    
+    import requests
+    
     try:
         # Buscar en varios campos
         query = f"?or=(numero.ilike.*{termino}*,descripcion.ilike.*{termino}*)"
@@ -229,6 +254,12 @@ def cotizaciones_por_cliente(id_cliente: int, limite: Optional[int] = None) -> L
     Returns:
         List[Dict]: Lista de cotizaciones del cliente.
     """
+    # Asegurar que las variables estén inicializadas
+    if headers is None:
+        initialize()
+    
+    import requests
+    
     try:
         # Construir la URL con el ID del cliente
         url = f"{POSTGREST_URL}/cotizacion?id_cliente=eq.{id_cliente}"
@@ -261,6 +292,9 @@ def mostrar_tabla_cotizaciones(cotizaciones: List[Dict]) -> None:
     Args:
         cotizaciones (List[Dict]): Lista de cotizaciones para mostrar.
     """
+    from datetime import datetime
+    from rich.table import Table
+    
     if not cotizaciones:
         console.print("[bold yellow]No se encontraron cotizaciones.[/bold yellow]")
         return
@@ -301,165 +335,17 @@ def mostrar_tabla_cotizaciones(cotizaciones: List[Dict]) -> None:
     console.print(tabla)
 
 
-# # Comandos CLI
-# @click.group(help="Gestión de cotizaciones")
-# def cotizaciones():
-#     pass
-
-
-# @cotizaciones.command(help="Listar todas las cotizaciones")
-# def listar():
-#     """Listar todas las cotizaciones."""
-#     cotizaciones_list = obtener_cotizaciones()
-#     mostrar_tabla_cotizaciones(cotizaciones_list)
+def crear_cotizacion_ejemplo(id_cliente=1):
+    """Crea una cotización de ejemplo para pruebas"""
+    from datetime import datetime
     
-
-# @cotizaciones.command(help="Mostrar detalles de una cotización")
-# @click.argument("id", type=int)
-# @click.option("--json", is_flag=True, help="Mostrar en formato JSON")
-# def mostrar(id: int, json: bool):
-#     """Mostrar detalles de una cotización específica."""
-#     cotizacion = obtener_cotizacion(id)
+    cotizacion_data = {
+        "cliente_id": id_cliente,
+        "numero": f"COT-{datetime.now().strftime('%Y%m%d-%H%M')}",
+        "descripcion": "Cotización de prueba creada automáticamente",
+        "total": 1500.50,
+        "estado": "PENDIENTE",
+        "fecha_creacion": datetime.now().isoformat()
+    }
     
-#     if not cotizacion:
-#         console.print(f"[bold red]No se encontró la cotización con ID {id}[/bold red]")
-#         return
-        
-#     if json:
-#         console.print(json.dumps(cotizacion, indent=2))
-#     else:
-#         # Mostrar detalles en formato tabla
-#         tabla = Table(title=f"Detalles de Cotización #{id}", show_header=True)
-#         tabla.add_column("Campo", style="green")
-#         tabla.add_column("Valor", style="yellow")
-        
-#         # Añadir filas con los datos
-#         for campo, valor in cotizacion.items():
-#             # Formatear fechas
-#             if campo.startswith("fecha_") and valor:
-#                 try:
-#                     fecha_obj = datetime.fromisoformat(valor.replace("Z", "+00:00"))
-#                     valor = fecha_obj.strftime("%d/%m/%Y %H:%M:%S")
-#                 except (ValueError, TypeError):
-#                     pass
-                    
-#             # Formatear valores monetarios
-#             if campo in ["total", "subtotal", "impuestos"]:
-#                 if valor is not None:
-#                     valor = f"{valor:,.2f} €"
-                    
-#             tabla.add_row(campo, str(valor) if valor is not None else "")
-            
-#         console.print(tabla)
-
-
-# @cotizaciones.command(help="Buscar cotizaciones")
-# @click.argument("termino")
-# def buscar(termino: str):
-#     """Buscar cotizaciones que coincidan con el término."""
-#     resultados = buscar_cotizaciones(termino)
-#     mostrar_tabla_cotizaciones(resultados)
-
-
-# @cotizaciones.command(help="Crear una nueva cotización")
-# @click.option("--cliente-id", required=True, type=int, help="ID del cliente")
-# @click.option("--numero", required=True, help="Número de cotización")
-# @click.option("--descripcion", required=True, help="Descripción de la cotización")
-# @click.option("--total", type=float, default=0.0, help="Total de la cotización")
-# def crear(cliente_id: int, numero: str, descripcion: str, total: float):
-#     """Crear una nueva cotización."""
-#     datos = {
-#         "cliente_id": cliente_id,
-#         "numero": numero,
-#         "descripcion": descripcion,
-#         "total": total,
-#         "estado": "PENDIENTE",
-#         "fecha_creacion": datetime.now().isoformat()
-#     }
-    
-#     cotizacion = crear_cotizacion(datos)
-    
-#     if cotizacion:
-#         console.print(f"[bold green]Cotización creada con éxito. ID: {cotizacion.get('id')}[/bold green]")
-#         mostrar_tabla_cotizaciones([cotizacion])
-#     else:
-#         console.print("[bold red]Error al crear la cotización.[/bold red]")
-
-
-# @cotizaciones.command(help="Actualizar una cotización existente")
-# @click.argument("id", type=int)
-# @click.option("--cliente-id", type=int, help="ID del cliente")
-# @click.option("--numero", help="Número de cotización")
-# @click.option("--descripcion", help="Descripción de la cotización")
-# @click.option("--estado", help="Estado de la cotización")
-# @click.option("--total", type=float, help="Total de la cotización")
-# def actualizar(id: int, cliente_id: Optional[int], numero: Optional[str], 
-#               descripcion: Optional[str], estado: Optional[str], total: Optional[float]):
-#     """Actualizar una cotización existente."""
-#     # Verificar que la cotización existe
-#     cotizacion_existente = obtener_cotizacion(id)
-#     if not cotizacion_existente:
-#         console.print(f"[bold red]No se encontró la cotización con ID {id}[/bold red]")
-#         return
-        
-#     # Construir datos a actualizar
-#     datos = {}
-#     if cliente_id is not None:
-#         datos["cliente_id"] = cliente_id
-#     if numero is not None:
-#         datos["numero"] = numero
-#     if descripcion is not None:
-#         datos["descripcion"] = descripcion
-#     if estado is not None:
-#         datos["estado"] = estado
-#     if total is not None:
-#         datos["total"] = total
-        
-#     # Si no hay datos para actualizar
-#     if not datos:
-#         console.print("[yellow]No se especificaron datos para actualizar.[/yellow]")
-#         return
-        
-#     # Actualizar cotización
-#     exito = actualizar_cotizacion(id, datos)
-    
-#     if exito:
-#         console.print(f"[bold green]Cotización actualizada con éxito.[/bold green]")
-#         # Mostrar cotización actualizada
-#         cotizacion_actualizada = obtener_cotizacion(id)
-#         if cotizacion_actualizada:
-#             mostrar_tabla_cotizaciones([cotizacion_actualizada])
-#     else:
-#         console.print("[bold red]Error al actualizar la cotización.[/bold red]")
-
-
-# @cotizaciones.command(help="Eliminar una cotización")
-# @click.argument("id", type=int)
-# @click.option("--confirmar", is_flag=True, help="Confirmar eliminación sin preguntar")
-# def eliminar(id: int, confirmar: bool):
-#     """Eliminar una cotización."""
-#     # Verificar que la cotización existe
-#     cotizacion = obtener_cotizacion(id)
-#     if not cotizacion:
-#         console.print(f"[bold red]No se encontró la cotización con ID {id}[/bold red]")
-#         return
-        
-#     # Confirmar eliminación
-#     if not confirmar:
-#         console.print(f"[bold yellow]¿Está seguro de eliminar la cotización #{cotizacion.get('numero')} (ID: {id})?[/bold yellow]")
-#         confirmacion = click.confirm("¿Confirmar eliminación?", default=False)
-#         if not confirmacion:
-#             console.print("[yellow]Operación cancelada.[/yellow]")
-#             return
-            
-#     # Eliminar cotización
-#     exito = eliminar_cotizacion(id)
-    
-#     if exito:
-#         console.print(f"[bold green]Cotización eliminada con éxito.[/bold green]")
-#     else:
-#         console.print("[bold red]Error al eliminar la cotización.[/bold red]")
-
-
-# if __name__ == "__main__":
-#     cotizaciones()
+    return crear_cotizacion(cotizacion_data)

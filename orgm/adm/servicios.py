@@ -1,46 +1,40 @@
 # -*- coding: utf-8 -*-
 """Funciones para acceder a datos de la tabla *servicio* en PostgREST."""
 
-import os
 from typing import Dict, List, Optional
-import requests
-from dotenv import load_dotenv
 from rich.console import Console
-from orgm.adm.db import Servicios
+from orgm.adm.db import Servicios  # Importación a nivel de módulo para que otros módulos puedan acceder
 
 console = Console()
 
-# Load environment variables
-load_dotenv(override=True)
+# Inicializar variables como None a nivel de módulo
+POSTGREST_URL = None
+headers = None
 
-# Get the PostgREST URL from environment variables
-POSTGREST_URL = os.getenv("POSTGREST_URL")
-
-# Get Cloudflare Access credentials
-CF_ACCESS_CLIENT_ID = os.getenv("CF_ACCESS_CLIENT_ID")
-CF_ACCESS_CLIENT_SECRET = os.getenv("CF_ACCESS_CLIENT_SECRET")
-
-if not POSTGREST_URL:
-    console.print(
-        "[bold red]Error: POSTGREST_URL no está definida en las variables de entorno.[/bold red]"
-    )
-    exit(1)
-
-if not all([CF_ACCESS_CLIENT_ID, CF_ACCESS_CLIENT_SECRET]):
-    console.print(
-        "[bold yellow]Advertencia: CF_ACCESS_CLIENT_ID o CF_ACCESS_CLIENT_SECRET no están definidas en las variables de entorno.[/bold yellow]"
-    )
-    console.print(
-        "[bold yellow]Las consultas a PostgREST no incluirán autenticación de Cloudflare Access.[/bold yellow]"
-    )
-
-# Configure headers for PostgREST API
-headers = {"Content-Type": "application/json", "Accept": "application/json"}
-
-# Add Cloudflare Access headers if available
-if CF_ACCESS_CLIENT_ID and CF_ACCESS_CLIENT_SECRET:
-    headers["CF-Access-Client-Id"] = CF_ACCESS_CLIENT_ID
-    headers["CF-Access-Client-Secret"] = CF_ACCESS_CLIENT_SECRET
+def initialize():
+    """Inicializa las variables que anteriormente estaban a nivel de módulo"""
+    global POSTGREST_URL, headers
+    
+    import os
+    from dotenv import load_dotenv
+    from orgm.apis.header import get_headers_json
+    
+    load_dotenv(override=True)
+    
+    # Obtener URL de PostgREST
+    POSTGREST_URL = os.getenv("POSTGREST_URL")
+    if not POSTGREST_URL:
+        console.print(
+            "[bold red]Error: POSTGREST_URL no está definida en las variables de entorno.[/bold red]"
+        )
+        return False
+    
+    # Obtener headers usando la función centralizada
+    headers = get_headers_json()
+    # Añadir header adicional para PostgREST
+    headers["Prefer"] = "return=representation"
+    
+    return True
 
 
 def obtener_servicios() -> List[Dict]:
@@ -50,6 +44,12 @@ def obtener_servicios() -> List[Dict]:
     Returns:
         List[Dict]: Lista de servicios en formato dict.
     """
+    # Asegurar que las variables estén inicializadas
+    if headers is None:
+        initialize()
+    
+    import requests
+    
     try:
         response = requests.get(f"{POSTGREST_URL}/servicio", headers=headers, timeout=10)
         response.raise_for_status()
@@ -72,6 +72,12 @@ def obtener_servicio(servicio_id: int) -> Optional[Dict]:
     Returns:
         Optional[Dict]: Detalles del servicio o None si no se encuentra.
     """
+    # Asegurar que las variables estén inicializadas
+    if headers is None:
+        initialize()
+    
+    import requests
+    
     try:
         response = requests.get(
             f"{POSTGREST_URL}/servicio?id=eq.{servicio_id}", headers=headers, timeout=10
@@ -102,6 +108,12 @@ def crear_servicio(
     Returns:
         Optional[Dict]: Servicio creado o None si hay un error.
     """
+    # Asegurar que las variables estén inicializadas
+    if headers is None:
+        initialize()
+    
+    import requests
+    
     datos_servicio = {
         "concepto": concepto,
         "descripcion": descripcion,
@@ -146,6 +158,12 @@ def actualizar_servicio(
     Returns:
         bool: True si la actualización fue exitosa, False en caso contrario.
     """
+    # Asegurar que las variables estén inicializadas
+    if headers is None:
+        initialize()
+    
+    import requests
+    
     # Crear un diccionario con los datos a actualizar
     datos_actualizacion = {}
     if concepto is not None:
@@ -188,6 +206,12 @@ def eliminar_servicio(servicio_id: int) -> bool:
     Returns:
         bool: True si la eliminación fue exitosa, False en caso contrario.
     """
+    # Asegurar que las variables estén inicializadas
+    if headers is None:
+        initialize()
+    
+    import requests
+    
     try:
         response = requests.delete(
             f"{POSTGREST_URL}/servicio?id=eq.{servicio_id}", headers=headers, timeout=10
@@ -212,6 +236,12 @@ def buscar_servicios(termino: str) -> List[Dict]:
     Returns:
         List[Dict]: Lista de servicios coincidentes.
     """
+    # Asegurar que las variables estén inicializadas
+    if headers is None:
+        initialize()
+    
+    import requests
+    
     try:
         # Construir una consulta SQL para búsqueda en texto
         response = requests.get(

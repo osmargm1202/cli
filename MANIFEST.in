@@ -7,6 +7,7 @@ include orgm/*.bat
 include orgm/data/*
 include orgm/stuff/*
 include orgm/adm/*
+include orgm/temp/*
 include orgm/apis/*
 include orgm/apps/*
 recursive-include orgm *.md *.json *.txt *.html *.css *.js *.csv *.yaml *.yml *.example

@@ -14,8 +14,8 @@ from orgm.adm.firma import firmar_pdf, seleccionar_y_firmar_pdf
 from orgm.apps.clientes import clientes
 from orgm.apps.proyectos import proyecto
 from orgm.apps.cotizaciones import cotizacion
-from orgm.apps.docker_cli import docker as docker_cmd
-from orgm.stuff.ai import generate_text
+from orgm.apps.docker import docker as docker_cmd
+from orgm.apis.ai import generate_text
 
 # Load environment variables
 load_dotenv(override=True)

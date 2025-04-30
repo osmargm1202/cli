@@ -1,4 +1,4 @@
-import click
+import typer
 import questionary
 from typing import Dict, Optional
 from rich.console import Console
@@ -18,6 +18,9 @@ from orgm.adm.db import Proyecto
 from orgm.stuff.spinner import spinner
 
 console = Console()
+
+# Crear la aplicación Typer para proyectos
+app = typer.Typer(help="Gestión de proyectos")
 
 
 def mostrar_proyectos(proyectos):
@@ -169,9 +172,9 @@ def formulario_proyecto(proyecto=None) -> Dict:
     return data
 
 
-@click.group(invoke_without_command=True)
-@click.pass_context
-def proyecto(ctx):
+# Comando principal para el menú interactivo
+@app.callback(invoke_without_command=True)
+def main(ctx: typer.Context):
     """Gestión de proyectos"""
     if ctx.invoked_subcommand is None:
         menu_principal()
@@ -194,7 +197,13 @@ def menu_principal():
         ).ask()
 
         if accion == "Volver al menú principal":
-            break
+            # Intentar volver al menú principal de orgm si existe
+            try:
+                from orgm.commands.menu import menu_principal
+                return menu_principal()
+            except ImportError:
+                # Si no se puede importar, simplemente salimos
+                break
 
         if accion == "Ver todos los proyectos":
             with spinner("Listando proyectos..."):
@@ -360,7 +369,7 @@ def menu_principal():
                 mostrar_proyecto_detalle(proyecto_obj)
 
 
-@proyecto.command("listar")
+@app.command("list")
 def listar_proyectos():
     """Listar todos los proyectos"""
     with spinner("Listando proyectos..."):
@@ -368,16 +377,15 @@ def listar_proyectos():
     mostrar_proyectos(proyectos)
 
 
-@proyecto.command("buscar")
-@click.argument("termino")
-def cmd_buscar_proyectos(termino):
+@app.command("find")
+def cmd_buscar_proyectos(termino: str):
     """Buscar proyectos por término"""
     with spinner(f"Buscando proyectos por '{termino}'..."):
         proyectos = buscar_proyectos(termino)
     mostrar_proyectos(proyectos)
 
 
-@proyecto.command("crear")
+@app.command("create")
 def cmd_crear_proyecto():
     """Crear un nuevo proyecto"""
     datos = formulario_proyecto()
@@ -390,9 +398,8 @@ def cmd_crear_proyecto():
             )
 
 
-@proyecto.command("modificar")
-@click.argument("id_proyecto", type=int)
-def cmd_modificar_proyecto(id_proyecto):
+@app.command("edit")
+def cmd_modificar_proyecto(id_proyecto: int):
     """Modificar un proyecto existente"""
     with spinner(f"Obteniendo proyecto {id_proyecto}..."):
         proyecto_a_editar = obtener_proyecto(id_proyecto)
@@ -410,9 +417,8 @@ def cmd_modificar_proyecto(id_proyecto):
             )
 
 
-@proyecto.command("eliminar")
-@click.argument("id_proyecto", type=int)
-def cmd_eliminar_proyecto(id_proyecto):
+@app.command("delete")
+def cmd_eliminar_proyecto(id_proyecto: int):
     """Eliminar un proyecto existente"""
     with spinner(f"Verificando proyecto {id_proyecto}..."):
         proyecto_a_eliminar = obtener_proyecto(id_proyecto)
@@ -421,10 +427,10 @@ def cmd_eliminar_proyecto(id_proyecto):
         return
 
     # Confirmar eliminación
-    confirmar = questionary.confirm(
+    confirmar = typer.confirm(
         f"¿Está seguro de eliminar el proyecto '{proyecto_a_eliminar.nombre_proyecto}'?",
         default=False,
-    ).ask()
+    )
 
     if confirmar:
         with spinner(f"Eliminando proyecto {id_proyecto}..."):
@@ -445,9 +451,8 @@ def mostrar_proyecto_detalle(proyecto: Proyecto):
     console.print(table)
 
 
-@proyecto.command("ver")
-@click.argument("id_proyecto", type=int)
-def cmd_ver_proyecto(id_proyecto):
+@app.command("show")
+def cmd_ver_proyecto(id_proyecto: int):
     """Ver los datos de un proyecto por su ID"""
     with spinner(f"Obteniendo detalles del proyecto {id_proyecto}..."):
         proyecto_obj = obtener_proyecto(id_proyecto)
@@ -457,5 +462,8 @@ def cmd_ver_proyecto(id_proyecto):
     mostrar_proyecto_detalle(proyecto_obj)
 
 
+# Reemplazar la exportación del grupo click por la app de typer
+proyecto = app
+
 if __name__ == "__main__":
-    proyecto()
+    app()

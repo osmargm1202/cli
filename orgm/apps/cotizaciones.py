@@ -1,4 +1,4 @@
-import click
+import typer
 import questionary
 from typing import Dict, Optional, List
 from rich.console import Console
@@ -6,16 +6,16 @@ from rich.table import Table
 from rich import print
 from orgm.apis.divisa import obtener_tasa_divisa
 from orgm.adm.servicios import obtener_servicios
-from orgm.stuff.ai import generate_project_description
+from orgm.apis.ai import generate_project_description
 import os, requests
 from orgm.adm.clientes import buscar_clientes
 from orgm.adm.cotizaciones import cotizaciones_por_cliente
 from orgm.adm.proyectos import buscar_proyectos, Proyecto
 from orgm.adm.db import Cotizacion
 from orgm.stuff.spinner import spinner
+from orgm.apis.header import get_headers_json
 
 console = Console()
-
 
 import os
 from datetime import datetime
@@ -38,29 +38,17 @@ if not POSTGREST_URL:
     )
     exit(1)
 
-# Obtener credenciales de Cloudflare Access
-CF_ACCESS_CLIENT_ID = os.getenv("CF_ACCESS_CLIENT_ID")
-CF_ACCESS_CLIENT_SECRET = os.getenv("CF_ACCESS_CLIENT_SECRET")
+# Configuración de los headers usando la función centralizada
+headers = get_headers_json()
 
-if not all([CF_ACCESS_CLIENT_ID, CF_ACCESS_CLIENT_SECRET]):
+# Verificar si se obtuvieron las credenciales (opcional)
+if "CF-Access-Client-Id" not in headers:
     console.print(
-        "[bold yellow]Advertencia: CF_ACCESS_CLIENT_ID o CF_ACCESS_CLIENT_SECRET no están definidas en las variables de entorno.[/bold yellow]"
+        "[bold yellow]Advertencia: Credenciales de Cloudflare Access no encontradas o no configuradas.[/bold yellow]"
     )
     console.print(
         "[bold yellow]Las consultas no incluirán autenticación de Cloudflare Access.[/bold yellow]"
     )
-
-# Configuración de los headers para PostgREST
-headers = {
-    "Content-Type": "application/json",
-    "Accept": "application/json",
-    "Prefer": "return=representation",
-}
-
-# Agregar headers de Cloudflare Access si están disponibles
-if CF_ACCESS_CLIENT_ID and CF_ACCESS_CLIENT_SECRET:
-    headers["CF-Access-Client-Id"] = CF_ACCESS_CLIENT_ID
-    headers["CF-Access-Client-Secret"] = CF_ACCESS_CLIENT_SECRET
 
 
 def obtener_cotizaciones() -> List[Dict]:
@@ -555,9 +543,12 @@ def formulario_cotizacion(cotizacion=None) -> Dict:
     return datos
 
 
-@click.group(invoke_without_command=True)
-@click.pass_context
-def cotizacion(ctx):
+# Crear la aplicación Typer para cotizaciones
+app = typer.Typer(help="Gestión de cotizaciones")
+
+# Comando principal para el menú interactivo
+@app.callback(invoke_without_command=True)
+def main(ctx: typer.Context):
     """Gestión de cotizaciones"""
     if ctx.invoked_subcommand is None:
         menu_principal()
@@ -579,7 +570,13 @@ def menu_principal():
         ).ask()
 
         if accion == "Volver al menú principal":
-            break
+            # Intentar volver al menú principal de orgm si existe
+            try:
+                from orgm.commands.menu import menu_principal
+                return menu_principal()
+            except ImportError:
+                # Si no se puede importar, simplemente salimos
+                break
 
         if accion == "Ver todas las cotizaciones":
             cotizaciones = obtener_cotizaciones()
@@ -706,24 +703,25 @@ def menu_principal():
                 continue
             mostrar_cotizacion_detalle(cot)
 
-# Subcommand wrappers
-
-@cotizacion.command("listar")
+# Reemplazar comandos de click por typer
+@app.command("list")
 def cmd_listar_cotizaciones():
+    """Listar todas las cotizaciones"""
     cotizaciones = obtener_cotizaciones()
     mostrar_cotizaciones(cotizaciones)
 
 
-@cotizacion.command("buscar")
-@click.argument("termino")
-def cmd_buscar_cotizaciones(termino):
+@app.command("find")
+def cmd_buscar_cotizaciones(termino: str):
+    """Buscar cotizaciones por nombre de cliente"""
     cliente_id = _seleccionar_cliente_por_nombre(termino)
     if cliente_id:
         _mostrar_cotis_cliente(cliente_id)
 
 
-@cotizacion.command("crear")
+@app.command("create")
 def cmd_crear_cotizacion():
+    """Crear una nueva cotización"""
     datos = formulario_cotizacion()
     if datos:
         nueva = crear_cotizacion(datos)
@@ -733,9 +731,9 @@ def cmd_crear_cotizacion():
             print(f"[bold green]Cotización creada: ID {nueva_id}[/bold green]")
 
 
-@cotizacion.command("modificar")
-@click.argument("id_cotizacion", type=int)
-def cmd_modificar_cotizacion(id_cotizacion):
+@app.command("edit")
+def cmd_modificar_cotizacion(id_cotizacion: int):
+    """Modificar una cotización existente"""
     cot = obtener_cotizacion(id_cotizacion)
     if not cot:
         print(f"[bold red]No se encontró la cotización con ID {id_cotizacion}[/bold red]")
@@ -747,17 +745,30 @@ def cmd_modificar_cotizacion(id_cotizacion):
             print("[bold green]Cotización actualizada[/bold green]")
 
 
-@cotizacion.command("eliminar")
-@click.argument("id_cotizacion", type=int)
-def cmd_eliminar_cotizacion(id_cotizacion):
+@app.command("delete")
+def cmd_eliminar_cotizacion(id_cotizacion: int):
+    """Eliminar una cotización"""
     cot = obtener_cotizacion(id_cotizacion)
     if not cot:
         print(f"[bold red]No se encontró la cotización con ID {id_cotizacion}[/bold red]")
         return
-    if questionary.confirm("¿Eliminar cotización?", default=False).ask():
+    if typer.confirm("¿Está seguro de eliminar esta cotización?", default=False):
         if eliminar_cotizacion(id_cotizacion):
-            print("[bold green]Cotización eliminada[/bold green]")
+            print("[bold green]Cotización eliminada correctamente[/bold green]")
 
+
+@app.command("show")
+def cmd_ver_cotizacion(id_cotizacion: int):
+    """Ver detalles de una cotización"""
+    cot = obtener_cotizacion(id_cotizacion)
+    if not cot:
+        print(f"[bold red]No se encontró la cotización con ID {id_cotizacion}[/bold red]")
+        return
+    mostrar_cotizacion_detalle(cot)
+
+
+# Reemplazar la exportación del grupo click por la app de typer
+cotizacion = app
 
 # --- helper para seleccionar cliente ---
 def _seleccionar_cliente_por_nombre(termino: str) -> Optional[int]:
@@ -822,20 +833,6 @@ def mostrar_cotizacion_detalle(cotizacion):
     console.print(table)
 
 
-# Nuevo comando: Ver detalles de una cotización
-
-
-@cotizacion.command("ver")
-@click.argument("id_cotizacion", type=int)
-def cmd_ver_cotizacion(id_cotizacion):
-    """Ver los datos de una cotización por su ID"""
-    cot = obtener_cotizacion(id_cotizacion)
-    if not cot:
-        print(f"[bold red]No se encontró la cotización con ID {id_cotizacion}[/bold red]")
-        return
-    mostrar_cotizacion_detalle(cot)
-
-
 def cotizaciones_por_proyecto(id_proyecto: int, limite: Optional[int] = None) -> List[Dict]:
     """
     Obtiene las cotizaciones de un proyecto específico.
@@ -850,6 +847,7 @@ def cotizaciones_por_proyecto(id_proyecto: int, limite: Optional[int] = None) ->
     try:
         # Seleccionar todos los campos de cotizacion, y campos específicos de cliente y proyecto
         select_query = "select=*,cliente(id,nombre),proyecto(id,nombre_proyecto)"
+        # Aseguramos que estamos buscando correctamente por id_proyecto
         url = f"{POSTGREST_URL}/cotizacion?id_proyecto=eq.{id_proyecto}&{select_query}"
         
         # Agregar límite si se especifica
@@ -859,10 +857,26 @@ def cotizaciones_por_proyecto(id_proyecto: int, limite: Optional[int] = None) ->
         # Ordenar por fecha de creación descendente
         url += "&order=fecha.desc"
         
+        # Imprimir la URL para depuración
+        console.print(f"[cyan]DEBUG: URL para cotizaciones por proyecto: {url}[/cyan]")
+        
         with spinner(f"Obteniendo cotizaciones del proyecto ID: {id_proyecto}..."):
             response = requests.get(url, headers=headers)
+        
+        # Verificar el código de estado
+        if response.status_code != 200:
+            console.print(f"[bold red]Error HTTP {response.status_code}: {response.text}[/bold red]")
+            return []
+            
+        # Intentar obtener el contenido JSON
         response.raise_for_status()
-        return response.json()
+        result = response.json()
+        
+        # Verificar si tenemos resultados
+        if not result:
+            console.print(f"[yellow]No se encontraron cotizaciones para el proyecto ID {id_proyecto}[/yellow]")
+        
+        return result
     except requests.exceptions.HTTPError as e:
         console.print(f"[bold red]Error en la solicitud HTTP: {e}[/bold red]")
         return []
@@ -951,4 +965,4 @@ def _seleccionar_proyecto_por_nombre(termino: str) -> Optional[int]:
 
 
 if __name__ == "__main__":
-    cotizacion() 
+    app() 

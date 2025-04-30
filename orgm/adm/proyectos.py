@@ -1,49 +1,56 @@
 # -*- coding: utf-8 -*-
-import os
-import requests
 from typing import Dict, List, Optional
-from dotenv import load_dotenv
 from rich.console import Console
-from orgm.adm.db import Proyecto, Ubicacion
-from orgm.stuff.ai import generate_project_description
+from orgm.adm.db import Proyecto, Ubicacion  # Importación a nivel de módulo para que otros módulos puedan acceder
 
 console = Console()
-load_dotenv(override=True)
 
-# Obtener la URL de PostgREST desde las variables de entorno
-POSTGREST_URL = os.getenv("POSTGREST_URL")
-if not POSTGREST_URL:
-    console.print(
-        "[bold red]Error: POSTGREST_URL no está definida en las variables de entorno[/bold red]"
-    )
+# Inicializar variables como None a nivel de módulo
+POSTGREST_URL = None
+headers = None
 
-# Obtener credenciales de Cloudflare Access
-CF_ACCESS_CLIENT_ID = os.getenv("CF_ACCESS_CLIENT_ID")
-CF_ACCESS_CLIENT_SECRET = os.getenv("CF_ACCESS_CLIENT_SECRET")
-
-if not all([CF_ACCESS_CLIENT_ID, CF_ACCESS_CLIENT_SECRET]):
-    console.print(
-        "[bold yellow]Advertencia: CF_ACCESS_CLIENT_ID o CF_ACCESS_CLIENT_SECRET no están definidas en las variables de entorno.[/bold yellow]"
-    )
-    console.print(
-        "[bold yellow]Las consultas no incluirán autenticación de Cloudflare Access.[/bold yellow]"
-    )
-
-# Configuración de los headers para PostgREST
-headers = {
-    "Content-Type": "application/json",
-    "Accept": "application/json",
-    "Prefer": "return=representation",
-}
-
-# Agregar headers de Cloudflare Access si están disponibles
-if CF_ACCESS_CLIENT_ID and CF_ACCESS_CLIENT_SECRET:
-    headers["CF-Access-Client-Id"] = CF_ACCESS_CLIENT_ID
-    headers["CF-Access-Client-Secret"] = CF_ACCESS_CLIENT_SECRET
+def initialize():
+    """Inicializa las variables que anteriormente estaban a nivel de módulo"""
+    global POSTGREST_URL, headers
+    
+    import os
+    from dotenv import load_dotenv
+    from orgm.apis.header import get_headers_json
+    
+    load_dotenv(override=True)
+    
+    # Obtener URL de PostgREST
+    POSTGREST_URL = os.getenv("POSTGREST_URL")
+    if not POSTGREST_URL:
+        console.print(
+            "[bold red]Error: POSTGREST_URL no está definida en las variables de entorno[/bold red]"
+        )
+        return False
+    
+    # Obtener headers usando la función centralizada
+    headers = get_headers_json()
+    
+    # Verificar si se obtuvieron las credenciales (opcional)
+    if "CF-Access-Client-Id" not in headers:
+        console.print(
+            "[bold yellow]Advertencia: Credenciales de Cloudflare Access no encontradas o no configuradas.[/bold yellow]"
+        )
+        console.print(
+            "[bold yellow]Las consultas no incluirán autenticación de Cloudflare Access.[/bold yellow]"
+        )
+    
+    return True
 
 
 def obtener_proyectos() -> List[Proyecto]:
     """Obtiene todos los proyectos desde PostgREST"""
+    # Asegurar que las variables estén inicializadas
+    if headers is None:
+        initialize()
+    
+    import requests
+    from orgm.adm.db import Proyecto
+    
     try:
         response = requests.get(f"{POSTGREST_URL}/proyecto", headers=headers, timeout=10)
         response.raise_for_status()
@@ -58,6 +65,13 @@ def obtener_proyectos() -> List[Proyecto]:
 
 def obtener_proyecto(id_proyecto: int) -> Optional[Proyecto]:
     """Obtiene un proyecto por su ID"""
+    # Asegurar que las variables estén inicializadas
+    if headers is None:
+        initialize()
+    
+    import requests
+    from orgm.adm.db import Proyecto
+    
     try:
         response = requests.get(
             f"{POSTGREST_URL}/proyecto?id=eq.{id_proyecto}", headers=headers, timeout=10
@@ -82,6 +96,14 @@ def obtener_proyecto(id_proyecto: int) -> Optional[Proyecto]:
 
 def crear_proyecto(proyecto_data: Dict) -> Optional[Proyecto]:
     """Crea un nuevo proyecto"""
+    # Asegurar que las variables estén inicializadas
+    if headers is None:
+        initialize()
+    
+    import requests
+    from orgm.adm.db import Proyecto
+    from orgm.apis.ai import generate_project_description
+    
     try:
         # Validar datos mínimos requeridos
         if not proyecto_data.get("nombre_proyecto"):
@@ -115,6 +137,14 @@ def crear_proyecto(proyecto_data: Dict) -> Optional[Proyecto]:
 
 def actualizar_proyecto(id_proyecto: int, proyecto_data: Dict) -> Optional[Proyecto]:
     """Actualiza un proyecto existente"""
+    # Asegurar que las variables estén inicializadas
+    if headers is None:
+        initialize()
+    
+    import requests
+    from orgm.adm.db import Proyecto
+    from orgm.apis.ai import generate_project_description
+    
     try:
         # Verificar que el proyecto existe
         proyecto_existente = obtener_proyecto(id_proyecto)
@@ -158,6 +188,12 @@ def actualizar_proyecto(id_proyecto: int, proyecto_data: Dict) -> Optional[Proye
 
 def eliminar_proyecto(id_proyecto: int) -> bool:
     """Elimina un proyecto existente"""
+    # Asegurar que las variables estén inicializadas
+    if headers is None:
+        initialize()
+    
+    import requests
+    
     try:
         # Verificar que el proyecto existe
         proyecto_existente = obtener_proyecto(id_proyecto)
@@ -182,6 +218,13 @@ def eliminar_proyecto(id_proyecto: int) -> bool:
 
 def buscar_proyectos(termino: str) -> List[Proyecto]:
     """Busca proyectos por nombre"""
+    # Asegurar que las variables estén inicializadas
+    if headers is None:
+        initialize()
+    
+    import requests
+    from orgm.adm.db import Proyecto
+    
     try:
         # Usamos el operador ILIKE de PostgreSQL para búsqueda case-insensitive
         response = requests.get(
@@ -201,6 +244,13 @@ def buscar_proyectos(termino: str) -> List[Proyecto]:
 
 def obtener_ubicaciones() -> List[Ubicacion]:
     """Obtiene todas las ubicaciones disponibles"""
+    # Asegurar que las variables estén inicializadas
+    if headers is None:
+        initialize()
+    
+    import requests
+    from orgm.adm.db import Ubicacion
+    
     try:
         response = requests.get(f"{POSTGREST_URL}/ubicacion", headers=headers, timeout=10)
         response.raise_for_status()
@@ -215,6 +265,13 @@ def obtener_ubicaciones() -> List[Ubicacion]:
 
 def buscar_ubicaciones(termino: str) -> List[Ubicacion]:
     """Busca ubicaciones por provincia, distrito o distrito municipal"""
+    # Asegurar que las variables estén inicializadas
+    if headers is None:
+        initialize()
+    
+    import requests
+    from orgm.adm.db import Ubicacion
+    
     try:
         response = requests.get(
             f"{POSTGREST_URL}/ubicacion?or=(provincia.ilike.*{termino}*,distrito.ilike.*{termino}*,distritomunicipal.ilike.*{termino}*)",
@@ -229,3 +286,17 @@ def buscar_ubicaciones(termino: str) -> List[Ubicacion]:
     except Exception as e:
         console.print(f"[bold red]Error al buscar ubicaciones: {e}[/bold red]")
         return []
+
+
+def crear_proyecto_ejemplo() -> Optional[Proyecto]:
+    """Crea un proyecto de ejemplo para pruebas"""
+    proyecto_data = {
+        "nombre_proyecto": "Proyecto de Prueba",
+        "descripcion": "Este es un proyecto creado automáticamente para pruebas",
+        "ubicacion": "Madrid",
+        "estado": "PLANIFICACION",
+        "fecha_inicio": None,
+        "fecha_fin_estimada": None
+    }
+    
+    return crear_proyecto(proyecto_data)

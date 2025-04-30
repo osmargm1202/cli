@@ -4,6 +4,7 @@ import subprocess
 import requests
 import platform
 from rich.console import Console
+from orgm.apis.header import get_headers_json  # Importar la función centralizada
 
 # Crear consola para salida con Rich
 console = Console()
@@ -30,31 +31,24 @@ def check_urls() -> None:
     endpoints = {
         "POSTGREST_URL": os.getenv("POSTGREST_URL"),
         "API_URL": os.getenv("API_URL"),
+        "RNC_URL": os.getenv("RNC_URL"),
+        "FIRMA_URL": os.getenv("FIRMA_URL"),
     }
 
-    # Obtener credenciales de Cloudflare Access
-    CF_ACCESS_CLIENT_ID = os.getenv("CF_ACCESS_CLIENT_ID")
-    CF_ACCESS_CLIENT_SECRET = os.getenv("CF_ACCESS_CLIENT_SECRET")
+    # Usar la función centralizada para obtener los headers
+    headers = get_headers_json()
+    
+    # Añadir el header específico de PostgREST
+    headers["Prefer"] = "return=representation"
 
-    if not all([CF_ACCESS_CLIENT_ID, CF_ACCESS_CLIENT_SECRET]):
+    # Verificar si están disponibles las credenciales de Cloudflare
+    if "CF-Access-Client-Id" not in headers:
         console.print(
             "[bold yellow]Advertencia: CF_ACCESS_CLIENT_ID o CF_ACCESS_CLIENT_SECRET no están definidas en las variables de entorno.[/bold yellow]"
         )
         console.print(
             "[bold yellow]Las consultas no incluirán autenticación de Cloudflare Access.[/bold yellow]"
         )
-
-    # Configuración de los headers para PostgREST
-    headers = {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-        "Prefer": "return=representation",
-    }
-
-    # Agregar headers de Cloudflare Access si están disponibles
-    if CF_ACCESS_CLIENT_ID and CF_ACCESS_CLIENT_SECRET:
-        headers["CF-Access-Client-Id"] = CF_ACCESS_CLIENT_ID
-        headers["CF-Access-Client-Secret"] = CF_ACCESS_CLIENT_SECRET
 
     for name, url in endpoints.items():
         if not url:

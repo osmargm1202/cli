@@ -6,7 +6,7 @@ from orgm.apis.divisa import obtener_tasa_divisa
 console = Console()
 
 def tasa_divisa_command(
-    desde: str = typer.Argument(..., help="Moneda de origen (ej. USD, EUR, DOP)"),
+    desde: str = typer.Argument('USD', help="Moneda de origen (ej. USD, EUR, DOP)"),
     a: str = typer.Argument('DOP', help="Moneda de destino (ej. USD, EUR, DOP)"),
     cantidad: float = typer.Argument(1.0, help="Cantidad a convertir")
 ):

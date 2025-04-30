@@ -10,11 +10,8 @@ classifiers = [
     "License :: OSI Approved :: Apache Software License"
 ]
 dependencies = [
-    "click",
-    "httpx>=0.28.1",
     "kivy>=2.3.1",
-    "plyer>=2.1.0",
-    "pyperclip>=1.9.0",
+    "nicegui>=2.15.0",
     "python-dotenv>=1.0.1",
     "questionary>=2.1.0",
     "requests>=2.32.3",
@@ -40,7 +37,7 @@ test = ["pytest"]
 include-package-data = true
 
 [tool.setuptools.package-data]
-orgm = ["*.md", "*.json", "*.txt", "*.html", "*.example", "*.css", "*.js", "data/*", "apis/*", "stuff/*", "adm/*", "apps/*", "*.sh", "*.bat"]
+orgm = ["*.md", "*.json", "*.txt", "*.html", "*.example", "*.css", "*.js", "data/*", "apis/*", "stuff/*", "adm/*", "apps/*", "temp/*", "*.sh", "*.bat"]
 
 [tool.setuptools.package-dir]
 "" = "."

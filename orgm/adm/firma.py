@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import os
 from typing import Optional
 from pathlib import Path
 from rich import print
@@ -13,19 +12,32 @@ def initialize():
     """Initialize variables that were previously at module level"""
     global FIRMA_URL, CF_ACCESS_CLIENT_ID, CF_ACCESS_CLIENT_SECRET
     
+    import os
     from dotenv import load_dotenv
+    from orgm.apis.header import get_headers_json
     
     load_dotenv(override=True)
     
     # Obtener variables de entorno necesarias
     FIRMA_URL = os.getenv("FIRMA_URL")
-    CF_ACCESS_CLIENT_ID = os.getenv("CF_ACCESS_CLIENT_ID")
-    CF_ACCESS_CLIENT_SECRET = os.getenv("CF_ACCESS_CLIENT_SECRET")
+    
+    # Obtener headers usando la función centralizada
+    headers = get_headers_json()
+    if "CF-Access-Client-Id" in headers and "CF-Access-Client-Secret" in headers:
+        CF_ACCESS_CLIENT_ID = headers["CF-Access-Client-Id"]
+        CF_ACCESS_CLIENT_SECRET = headers["CF-Access-Client-Secret"]
+    else:
+        # Fallback al método anterior
+        CF_ACCESS_CLIENT_ID = os.getenv("CF_ACCESS_CLIENT_ID")
+        CF_ACCESS_CLIENT_SECRET = os.getenv("CF_ACCESS_CLIENT_SECRET")
     
     if not all([FIRMA_URL, CF_ACCESS_CLIENT_ID, CF_ACCESS_CLIENT_SECRET]):
         print(
             "[bold red]Error: Se requieren las variables de entorno FIRMA_URL, CF_ACCESS_CLIENT_ID y CF_ACCESS_CLIENT_SECRET[/bold red]"
         )
+        return False
+    
+    return True
 
 
 def firmar_pdf(
@@ -47,7 +59,7 @@ def firmar_pdf(
     # Ensure initialization is done
     if FIRMA_URL is None:
         initialize()
-        
+    
     import requests
     
     try:
@@ -117,6 +129,7 @@ def seleccionar_y_firmar_pdf(x1: int = 100, y1: int = 100, ancho: int = 200):
         from kivy.app import App
         from kivy.lang import Builder
         from kivy.uix.boxlayout import BoxLayout
+        import os
 
 
         # Definir la interfaz con Kivy Language

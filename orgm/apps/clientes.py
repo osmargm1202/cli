@@ -4,9 +4,10 @@ import os
 import sys
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple
+from enum import Enum  # Usar Enum en lugar de Literal
 import questionary
 import requests
-import click
+import typer
 from dotenv import load_dotenv
 from rich import box
 from rich.console import Console
@@ -19,8 +20,15 @@ from orgm.adm.clientes import (
     buscar_clientes,
 )
 from orgm.stuff.spinner import spinner
+from orgm.apis.header import get_headers_json
+from orgm.apis.rnc import buscar_rnc_cliente # Importar la función de búsqueda RNC
 
 console = Console()
+
+# Definir enum para tipo de factura
+class TipoFactura(str, Enum):
+    NCFC = "NCFC"
+    NCF = "NCF"
 
 # Cargar variables de entorno
 load_dotenv(override=True)
@@ -28,9 +36,10 @@ load_dotenv(override=True)
 # URL de PostgREST
 POSTGREST_URL = os.getenv("POSTGREST_URL")
 
-# Credenciales de Cloudflare Access
-CF_ACCESS_CLIENT_ID = os.getenv("CF_ACCESS_CLIENT_ID")
-CF_ACCESS_CLIENT_SECRET = os.getenv("CF_ACCESS_CLIENT_SECRET")
+# Eliminar la lógica local de CF Access y headers
+# # Credenciales de Cloudflare Access
+# CF_ACCESS_CLIENT_ID = os.getenv("CF_ACCESS_CLIENT_ID")
+# CF_ACCESS_CLIENT_SECRET = os.getenv("CF_ACCESS_CLIENT_SECRET")
 
 if not POSTGREST_URL:
     console.print(
@@ -38,21 +47,17 @@ if not POSTGREST_URL:
     )
     sys.exit(1)
 
-# Configurar cabeceras para la API de PostgREST
-headers = {"Content-Type": "application/json", "Accept": "application/json"}
+# Configurar cabeceras usando la función centralizada
+headers = get_headers_json()
 
-# Añadir cabeceras de Cloudflare Access si están disponibles
-if CF_ACCESS_CLIENT_ID and CF_ACCESS_CLIENT_SECRET:
-    headers["CF-Access-Client-Id"] = CF_ACCESS_CLIENT_ID
-    headers["CF-Access-Client-Secret"] = CF_ACCESS_CLIENT_SECRET
-else:
+# Verificar si se obtuvieron las credenciales (opcional)
+if "CF-Access-Client-Id" not in headers:
     console.print(
-        "[bold yellow]Advertencia: CF_ACCESS_CLIENT_ID o CF_ACCESS_CLIENT_SECRET no están definidas.[/bold yellow]"
+        "[bold yellow]Advertencia: Credenciales de Cloudflare Access no encontradas o no configuradas.[/bold yellow]"
     )
     console.print(
         "[bold yellow]Las consultas a PostgREST no incluirán autenticación de Cloudflare Access.[/bold yellow]"
     )
-
 
 def mostrar_tabla_clientes(clientes: List) -> None:
     """
@@ -183,29 +188,77 @@ def formulario_cliente(cliente=None) -> Optional[Dict]:
     Muestra un formulario interactivo para crear o modificar un cliente.
 
     Args:
-        cliente: Datos del cliente existente para modificar (puede ser un objeto Cliente). None si es nuevo.
+        cliente: Datos del cliente existente para modificar. None si es nuevo.
 
     Returns:
         Optional[Dict]: Diccionario con los datos del cliente o None si se cancela.
     """
-    # Valores por defecto
-    if cliente:
-        # Asumimos que cliente es un objeto Pydantic y usamos model_dump()
-        # Si es un dict, esto fallará, pero el traceback indica que es un objeto
+    nombre_seleccionado = None
+    numero_seleccionado = None
+
+    if cliente is None: # Crear nuevo cliente
+        buscar_api = questionary.confirm("¿Buscar cliente por RNC/Nombre en la API antes de crear?").ask()
+        if buscar_api:
+            while True: # Bucle de búsqueda
+                termino_busqueda = questionary.text("Ingrese término de búsqueda (Nombre o RNC):").ask()
+                if not termino_busqueda:
+                    print("[yellow]Búsqueda cancelada. Ingresando datos manualmente.[/yellow]")
+                    break # Salir del bucle y proceder manualmente
+
+                with spinner(f"Buscando '{termino_busqueda}' en la API RNC..."):
+                    resultados_api = buscar_rnc_cliente(termino_busqueda)
+
+                if not resultados_api:
+                    print("[yellow]No se encontraron resultados.[/yellow]")
+                    reintentar = questionary.select(
+                        "¿Qué desea hacer?",
+                        choices=["Buscar de nuevo", "Continuar manualmente"]
+                    ).ask()
+                    if reintentar == "Continuar manualmente":
+                        break
+                    # Si elige "Buscar de nuevo", el bucle continúa
+                else:
+                    # Formatear resultados para questionary
+                    opciones = []
+                    for res in resultados_api:
+                        # Asegurarse de que las claves existen y formatear
+                        rnc = res.get('rnc', 'N/A')
+                        razon = res.get('razon', 'N/A')
+                        opciones.append(f"{rnc} - {razon}")
+                    
+                    opciones.extend(["Buscar de nuevo", "Continuar manualmente"])
+                    
+                    seleccion = questionary.select(
+                        "Seleccione el cliente deseado:",
+                        choices=opciones
+                    ).ask()
+
+                    if seleccion == "Continuar manualmente":
+                        break
+                    elif seleccion == "Buscar de nuevo":
+                        continue # Volver a pedir término de búsqueda
+                    else:
+                        # Extraer RNC y Razón Social de la selección
+                        try:
+                            numero_seleccionado = seleccion.split(' - ')[0]
+                            nombre_seleccionado = seleccion.split(' - ')[1]
+                            print(f"[green]Cliente seleccionado:[/green] {nombre_seleccionado} (RNC: {numero_seleccionado})")
+                            break # Salir del bucle con los datos seleccionados
+                        except IndexError:
+                            print("[red]Error al procesar la selección. Intentando de nuevo.[/red]")
+                            continue # Algo salió mal, volver a buscar
+
+    # Valores por defecto (usar los seleccionados si existen)
+    defaults = {}
+    if cliente: # Modificar cliente existente
         try:
             defaults = cliente.model_dump()
         except AttributeError:
-             # Fallback si no tiene model_dump (quizás es un dict ya?)
-             # O manejar el error de forma más específica
-             console.print("[bold red]Error: El objeto cliente no tiene el método model_dump().[/bold red]")
-             # Si cliente ya *es* un dict, esta línea funcionaría, pero el error dice que no es subscriptable.
-             # Si es otro tipo de objeto, necesitaríamos saber cómo convertirlo a dict.
-             # Por ahora, asumimos que es Pydantic o similar con model_dump().
-             defaults = {} # O devolver None, o lanzar excepción
-    else:
+             defaults = {} # Fallback
+    else: # Crear nuevo cliente
         defaults = {
-            "nombre": "",
-            "numero": "",
+            "nombre": nombre_seleccionado or "",
+            "numero": numero_seleccionado or "",
             "nombre_comercial": "",
             "correo": "",
             "direccion": "",
@@ -217,92 +270,81 @@ def formulario_cliente(cliente=None) -> Optional[Dict]:
             "extension_representante": "",
             "celular_representante": "",
             "correo_representante": "",
-            "tipo_factura": "NCFC",
+            "tipo_factura": TipoFactura.NCFC, # Usar Enum
         }
-    
-    # Usamos .get() en el diccionario defaults para manejar claves faltantes si model_dump no las incluyó
+
+    # --- Formulario principal --- 
     nombre = questionary.text(
         "Nombre del cliente:", default=defaults.get("nombre", "")
     ).ask()
     if not nombre:
-        return None
+        return None # Cancelar si no hay nombre
 
     numero = questionary.text(
         "Número/NIF del cliente:", default=defaults.get("numero", "")
     ).ask()
     if not numero:
-        return None
+         return None # Cancelar si no hay número
 
+    # ... resto de las preguntas del formulario ...
     nombre_comercial = questionary.text(
         "Nombre comercial:", default=defaults.get("nombre_comercial", "")
     ).ask()
-    # Permitir nombre comercial vacío si el usuario lo desea
-    # if not nombre_comercial:
-    #     return None
-
-    # Campos opcionales
     correo = questionary.text(
         "Correo electrónico:", default=defaults.get("correo", "")
     ).ask()
-
     direccion = questionary.text(
         "Dirección:", default=defaults.get("direccion", "")
     ).ask()
-
     ciudad = questionary.text("Ciudad:", default=defaults.get("ciudad", "")).ask()
-
     provincia = questionary.text(
         "Provincia:", default=defaults.get("provincia", "")
     ).ask()
-
     telefono = questionary.text("Teléfono:", default=defaults.get("telefono", "")).ask()
-
     representante = questionary.text(
         "Nombre del representante:", default=defaults.get("representante", "")
     ).ask()
-
     telefono_representante = questionary.text(
         "Teléfono del representante:",
         default=defaults.get("telefono_representante", ""),
     ).ask()
-
     extension_representante = questionary.text(
         "Extensión del representante:",
         default=defaults.get("extension_representante", ""),
     ).ask()
-
     celular_representante = questionary.text(
         "Celular del representante:",
         default=defaults.get("celular_representante", ""),
     ).ask()
-
     correo_representante = questionary.text(
         "Correo del representante:",
         default=defaults.get("correo_representante", ""),
     ).ask()
 
-    tipo_factura = questionary.select(
+    # Usar el Enum para el tipo de factura
+    tipo_factura_str = questionary.select(
         "Tipo de factura:",
-        choices=["NCFC", "NCF"],
-        default=defaults.get("tipo_factura", "NCFC"),
+        choices=[e.value for e in TipoFactura],
+        default=defaults.get("tipo_factura", TipoFactura.NCFC).value,
     ).ask()
+    tipo_factura = TipoFactura(tipo_factura_str) if tipo_factura_str else TipoFactura.NCFC
 
-    # Devolver un diccionario limpio con los datos ingresados
+    # Devolver un diccionario con los datos, usando None para campos vacíos opcionales
     return {
         "nombre": nombre,
         "numero": numero,
-        "nombre_comercial": nombre_comercial if nombre_comercial is not None else "", # Asegurar string
-        "correo": correo if correo is not None else "",
-        "direccion": direccion if direccion is not None else "",
-        "ciudad": ciudad if ciudad is not None else "",
-        "provincia": provincia if provincia is not None else "",
-        "telefono": telefono if telefono is not None else "",
-        "representante": representante if representante is not None else "",
-        "telefono_representante": telefono_representante if telefono_representante is not None else "",
-        "extension_representante": extension_representante if extension_representante is not None else "",
-        "celular_representante": celular_representante if celular_representante is not None else "",
-        "correo_representante": correo_representante if correo_representante is not None else "",
-        "tipo_factura": tipo_factura if tipo_factura is not None else "NCFC" # Asegurar un valor
+        "nombre_comercial": nombre_comercial if nombre_comercial else None,
+        "correo": correo if correo else None,
+        "direccion": direccion if direccion else None,
+        "ciudad": ciudad if ciudad else None,
+        "provincia": provincia if provincia else None,
+        "telefono": telefono if telefono else None,
+        "representante": representante if representante else None,
+        "telefono_representante": telefono_representante if telefono_representante else None,
+        "extension_representante": extension_representante if extension_representante else None,
+        "celular_representante": celular_representante if celular_representante else None,
+        "correo_representante": correo_representante if correo_representante else None,
+        "tipo_factura": tipo_factura.value # Enviar el valor string a la API
     }
 
 def eliminar_cliente(id: int) -> bool:
@@ -393,12 +435,18 @@ def menu_clientes():
                 "Crear nuevo cliente",
                 "Modificar cliente",
                 "Ver detalles de cliente",
-                "Salir",
+                "Volver al menú principal",
             ],
         ).ask()
 
-        if accion == "Salir":
-            break
+        if accion == "Volver al menú principal":
+            # Intentar volver al menú principal de orgm si existe
+            try:
+                from orgm.commands.menu import menu_principal
+                return menu_principal()
+            except ImportError:
+                # Si no se puede importar, simplemente salimos
+                break
         elif accion == "Listar todos los clientes":
             with spinner("Listando clientes..."):
                 clientes_list = obtener_clientes()
@@ -413,7 +461,8 @@ def menu_clientes():
             datos = formulario_cliente()
             if datos:
                 with spinner("Creando nuevo cliente..."):
-                    nuevo_cliente_obj = crear_cliente(**datos)
+                    # Llamar a crear_cliente pasando el diccionario directamente
+                    nuevo_cliente_obj = crear_cliente(datos)
                 if nuevo_cliente_obj:
                     nombre_cliente = getattr(nuevo_cliente_obj, 'nombre', nuevo_cliente_obj.get('nombre', 'N/A'))
                     console.print(f"[bold green]Cliente creado: {nombre_cliente}[/bold green]")
@@ -465,16 +514,11 @@ def menu_clientes():
                     console.print("[bold red]ID inválido, debe ser un número.[/bold red]")
 
 
-# Comando principal
-@click.group(invoke_without_command=True, help="Gestión de clientes")
-@click.pass_context
-def clientes(ctx):
-    """Gestión de clientes"""
-    if ctx.invoked_subcommand is None:
-        menu_clientes()
+# Crear la aplicación Typer para clientes
+app = typer.Typer(help="Gestión de clientes")
 
-
-@clientes.command(help="Listar todos los clientes")
+# Reemplazar comandos de click por typer
+@app.command("list", help="Listar todos los clientes")
 def listar():
     """Comando para listar todos los clientes."""
     with spinner("Listando clientes..."):
@@ -482,10 +526,8 @@ def listar():
     mostrar_tabla_clientes(lista_clientes)
 
 
-@clientes.command(help="Mostrar detalles de un cliente")
-@click.argument("id", type=int)
-@click.option("--json", "formato_json", is_flag=True, help="Mostrar en formato JSON")
-def mostrar(id: int, formato_json: bool):
+@app.command("show", help="Mostrar detalles de un cliente")
+def mostrar(id: int, formato_json: bool = typer.Option(False, "--json", help="Mostrar en formato JSON")):
     """Comando para mostrar detalles de un cliente."""
     with spinner(f"Obteniendo detalles del cliente {id}..."):
         cliente_obj = obtener_cliente(id)
@@ -501,8 +543,7 @@ def mostrar(id: int, formato_json: bool):
         mostrar_detalle_cliente(cliente_obj)
 
 
-@clientes.command(help="Buscar clientes")
-@click.argument("termino")
+@app.command("find", help="Buscar clientes")
 def buscar(termino: str):
     """Comando para buscar clientes."""
     with spinner(f"Buscando clientes por '{termino}'..."):
@@ -510,38 +551,39 @@ def buscar(termino: str):
     mostrar_tabla_clientes(resultados)
 
 
-@clientes.command(help="Crear un nuevo cliente")
-@click.option("--nombre", required=True, help="Nombre del cliente")
-@click.option("--numero", required=True, help="Número/NIF del cliente") 
-@click.option("--email", help="Email del cliente")
-@click.option("--telefono", help="Teléfono del cliente")
-@click.option("--nombre-comercial", help="Nombre comercial del cliente")
-@click.option("--direccion", help="Dirección del cliente")
-@click.option("--ciudad", help="Ciudad del cliente")
-@click.option("--provincia", help="Provincia del cliente")
-@click.option("--representante", help="Nombre del representante")
-@click.option("--telefono-representante", help="Teléfono del representante")
-@click.option("--extension-representante", help="Extensión del representante")
-@click.option("--celular-representante", help="Celular del representante")
-@click.option("--correo-representante", help="Correo del representante")
-@click.option("--tipo-factura", type=click.Choice(['NCFC', 'NCF']), default='NCFC', help="Tipo de factura")
-def crear(nombre: str, numero: str, **kwargs):
+@app.command("create", help="Crear un nuevo cliente")
+def crear(
+    nombre: str = typer.Option(..., help="Nombre del cliente", prompt=True),
+    numero: str = typer.Option(..., help="Número/NIF del cliente", prompt=True),
+    nombre_comercial: Optional[str] = typer.Option(None, help="Nombre comercial del cliente"),
+    email: Optional[str] = typer.Option(None, help="Email del cliente"),
+    telefono: Optional[str] = typer.Option(None, help="Teléfono del cliente"),
+    direccion: Optional[str] = typer.Option(None, help="Dirección del cliente"),
+    ciudad: Optional[str] = typer.Option(None, help="Ciudad del cliente"),
+    provincia: Optional[str] = typer.Option(None, help="Provincia del cliente"),
+    representante: Optional[str] = typer.Option(None, help="Nombre del representante"),
+    telefono_representante: Optional[str] = typer.Option(None, help="Teléfono del representante"),
+    extension_representante: Optional[str] = typer.Option(None, help="Extensión del representante"),
+    celular_representante: Optional[str] = typer.Option(None, help="Celular del representante"),
+    correo_representante: Optional[str] = typer.Option(None, help="Correo del representante"),
+    tipo_factura: TipoFactura = typer.Option(TipoFactura.NCFC, help="Tipo de factura")
+):
     """Comando para crear un nuevo cliente."""
     datos_cliente = {
         "nombre": nombre,
         "numero": numero,
-        "correo": kwargs.get("email"),
-        "telefono": kwargs.get("telefono"),
-        "nombre_comercial": kwargs.get("nombre_comercial"),
-        "direccion": kwargs.get("direccion"),
-        "ciudad": kwargs.get("ciudad"),
-        "provincia": kwargs.get("provincia"),
-        "representante": kwargs.get("representante"),
-        "telefono_representante": kwargs.get("telefono_representante"),
-        "extension_representante": kwargs.get("extension_representante"),
-        "celular_representante": kwargs.get("celular_representante"),
-        "correo_representante": kwargs.get("correo_representante"),
-        "tipo_factura": kwargs.get("tipo_factura", "NCFC"),
+        "correo": email,
+        "telefono": telefono,
+        "nombre_comercial": nombre_comercial,
+        "direccion": direccion,
+        "ciudad": ciudad,
+        "provincia": provincia,
+        "representante": representante,
+        "telefono_representante": telefono_representante,
+        "extension_representante": extension_representante,
+        "celular_representante": celular_representante,
+        "correo_representante": correo_representante,
+        "tipo_factura": tipo_factura,
     }
     datos_cliente = {k: v for k, v in datos_cliente.items() if v is not None}
 
@@ -556,23 +598,24 @@ def crear(nombre: str, numero: str, **kwargs):
         console.print("[bold red]Error al crear el cliente.[/bold red]")
 
 
-@clientes.command(help="Actualizar un cliente existente")
-@click.argument("id", type=int)
-@click.option("--nombre", help="Nuevo nombre del cliente")
-@click.option("--numero", help="Nuevo Número/NIF del cliente")
-@click.option("--nombre-comercial", help="Nuevo nombre comercial")
-@click.option("--correo", help="Nuevo email del cliente")
-@click.option("--direccion", help="Nueva dirección")
-@click.option("--ciudad", help="Nueva ciudad")
-@click.option("--provincia", help="Nueva provincia")
-@click.option("--telefono", help="Nuevo teléfono del cliente")
-@click.option("--representante", help="Nuevo nombre del representante")
-@click.option("--telefono-representante", help="Nuevo teléfono del representante")
-@click.option("--extension-representante", help="Nueva extensión del representante")
-@click.option("--celular-representante", help="Nuevo celular del representante")
-@click.option("--correo-representante", help="Nuevo correo del representante")
-@click.option("--tipo-factura", type=click.Choice(['NCFC', 'NCF']), help="Nuevo tipo de factura")
-def actualizar(id: int, **kwargs):
+@app.command("edit", help="Actualizar un cliente existente")
+def actualizar(
+    id: int,
+    nombre: Optional[str] = typer.Option(None, help="Nuevo nombre del cliente"),
+    numero: Optional[str] = typer.Option(None, help="Nuevo Número/NIF del cliente"),
+    nombre_comercial: Optional[str] = typer.Option(None, help="Nuevo nombre comercial"),
+    correo: Optional[str] = typer.Option(None, help="Nuevo email del cliente"),
+    direccion: Optional[str] = typer.Option(None, help="Nueva dirección"),
+    ciudad: Optional[str] = typer.Option(None, help="Nueva ciudad"),
+    provincia: Optional[str] = typer.Option(None, help="Nueva provincia"),
+    telefono: Optional[str] = typer.Option(None, help="Nuevo teléfono del cliente"),
+    representante: Optional[str] = typer.Option(None, help="Nuevo nombre del representante"),
+    telefono_representante: Optional[str] = typer.Option(None, help="Nuevo teléfono del representante"),
+    extension_representante: Optional[str] = typer.Option(None, help="Nueva extensión del representante"),
+    celular_representante: Optional[str] = typer.Option(None, help="Nuevo celular del representante"),
+    correo_representante: Optional[str] = typer.Option(None, help="Nuevo correo del representante"),
+    tipo_factura: Optional[TipoFactura] = typer.Option(None, help="Nuevo tipo de factura")
+):
     """Comando para actualizar un cliente existente."""
     with spinner(f"Verificando cliente {id}..."):
         cliente_existente = obtener_cliente(id)
@@ -580,7 +623,36 @@ def actualizar(id: int, **kwargs):
         console.print(f"[bold red]Cliente con ID {id} no encontrado.[/bold red]")
         return
 
-    datos_actualizacion = {k: v for k, v in kwargs.items() if v is not None}
+    # Recopilar todos los parámetros no None en un diccionario
+    datos_actualizacion = {}
+    if nombre is not None:
+        datos_actualizacion["nombre"] = nombre
+    if numero is not None:
+        datos_actualizacion["numero"] = numero
+    if nombre_comercial is not None:
+        datos_actualizacion["nombre_comercial"] = nombre_comercial
+    if correo is not None:
+        datos_actualizacion["correo"] = correo
+    if direccion is not None:
+        datos_actualizacion["direccion"] = direccion
+    if ciudad is not None:
+        datos_actualizacion["ciudad"] = ciudad
+    if provincia is not None:
+        datos_actualizacion["provincia"] = provincia
+    if telefono is not None:
+        datos_actualizacion["telefono"] = telefono
+    if representante is not None:
+        datos_actualizacion["representante"] = representante
+    if telefono_representante is not None:
+        datos_actualizacion["telefono_representante"] = telefono_representante
+    if extension_representante is not None:
+        datos_actualizacion["extension_representante"] = extension_representante
+    if celular_representante is not None:
+        datos_actualizacion["celular_representante"] = celular_representante
+    if correo_representante is not None:
+        datos_actualizacion["correo_representante"] = correo_representante
+    if tipo_factura is not None:
+        datos_actualizacion["tipo_factura"] = tipo_factura
 
     if not datos_actualizacion:
         console.print("[yellow]No se especificaron campos para actualizar.[/yellow]")
@@ -597,17 +669,15 @@ def actualizar(id: int, **kwargs):
             mostrar_tabla_clientes([cliente_obj])
         else:
             console.print("[yellow]No se pudo recuperar el cliente actualizado para mostrarlo.[/yellow]")
-
     else:
         console.print("[bold red]Error al actualizar el cliente (la API no devolvió datos).[/bold red]")
 
 
-@clientes.command(help="Eliminar un cliente")
-@click.argument("id", type=int)
-@click.option(
-    "--confirmar", is_flag=True, help="Confirmar eliminación sin preguntar"
-)
-def eliminar(id: int, confirmar: bool):
+@app.command("delete", help="Eliminar un cliente")
+def eliminar(
+    id: int,
+    confirmar: bool = typer.Option(False, "--confirmar", help="Confirmar eliminación sin preguntar")
+):
     """Comando para eliminar un cliente."""
     with spinner(f"Verificando cliente {id}..."):
         cliente = obtener_cliente(id)
@@ -620,7 +690,7 @@ def eliminar(id: int, confirmar: bool):
         console.print(
             f"[bold yellow]¿Está seguro de eliminar el cliente {nombre_cliente} (ID: {id})?[/bold yellow]"
         )
-        confirmacion = click.confirm("¿Confirmar eliminación?", default=False)
+        confirmacion = typer.confirm("¿Confirmar eliminación?", default=False)
         if not confirmacion:
             console.print("[yellow]Operación cancelada.[/yellow]")
             return
@@ -634,12 +704,11 @@ def eliminar(id: int, confirmar: bool):
         console.print("[bold red]Error al eliminar el cliente.[/bold red]")
 
 
-@clientes.command(help="Exportar cliente a formato JSON")
-@click.argument("id", type=int)
-@click.option(
-    "--clipboard", is_flag=True, help="Copiar al portapapeles en lugar de mostrar"
-)
-def exportar(id: int, clipboard: bool):
+@app.command("export", help="Exportar cliente a formato JSON")
+def exportar(
+    id: int,
+    clipboard: bool = typer.Option(False, "--clipboard", help="Copiar al portapapeles en lugar de mostrar")
+):
     """Comando para exportar un cliente a JSON."""
     with spinner(f"Obteniendo datos del cliente {id} para exportar..."):
         cliente = obtener_cliente(id)
@@ -665,12 +734,26 @@ def exportar(id: int, clipboard: bool):
                 console.print(f"[bold red]Error al copiar al portapapeles: {e}[/bold red]")
                 console.print("\nContenido JSON:")
                 console.print(contenido)
-
         else:
             console.print(contenido)
     else:
         console.print(f"[bold red]Error al exportar cliente: {contenido}[/bold red]")
 
 
+# Comando principal para el menú interactivo
+@app.callback(invoke_without_command=True)
+def main(ctx: typer.Context):
+    """Gestión de clientes"""
+    if ctx.invoked_subcommand is None:
+        # Mostrar el menú interactivo
+        try:
+            menu_clientes()
+        except Exception as e:
+            console.print(f"[bold red]Error en el menú de clientes: {e}[/bold red]")
+
+
+# Reemplazar la exportación del grupo click por la app de typer
+clientes = app
+
 if __name__ == "__main__":
-    clientes()
+    app()

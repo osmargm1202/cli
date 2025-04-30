@@ -2,7 +2,7 @@
 """
 Comandos relacionados con operaciones Docker para ORGM CLI.
 
-Este módulo traslada la lógica del script `build.sh` a Python utilizando `click` para la
+Este módulo traslada la lógica del script `build.sh` a Python utilizando `typer` para la
 línea de comandos y `questionary` para la interacción cuando se ejecuta el comando
 principal `orgm docker` sin subcomandos.
 
@@ -26,12 +26,15 @@ import os
 import subprocess
 from typing import List, Optional
 
-import click
+import typer
 import questionary
 from dotenv import load_dotenv
 from rich.console import Console
 
 console = Console()
+
+# Crear la aplicación Typer para docker
+app = typer.Typer(help="Gestión de imágenes Docker")
 
 
 # ---------------------------------------------------------------------------
@@ -45,7 +48,7 @@ def load_local_env() -> None:
         load_dotenv(dotenv_path=dotenv_path, override=True)
     else:
         console.print("[bold red]Error: .env file not found en el directorio actual[/bold red]")
-        raise click.ClickException("Falta archivo .env")
+        raise typer.Exit(1)
 
 
 def require_vars(varnames: List[str]):
@@ -57,7 +60,7 @@ def require_vars(varnames: List[str]):
         console.print(
             f"[bold red]Error: Variables de entorno faltantes:[/bold red] {vars_str}"
         )
-        raise click.ClickException("Variables de entorno faltantes")
+        raise typer.Exit(1)
 
 
 # ---------------------------------------------------------------------------
@@ -80,14 +83,13 @@ def _docker_cmd(cmd: List[str], *, input_text: Optional[str] = None):
             input=input_text,
         )
     except subprocess.CalledProcessError as exc:
-        raise click.ClickException(f"Error al ejecutar docker: {exc}") from exc
+        raise typer.Exit(f"Error al ejecutar docker: {exc}")
 
 
-@click.group(invoke_without_command=True)
-@click.pass_context
-def docker(ctx):
+# Callback principal para menú interactivo
+@app.callback(invoke_without_command=True)
+def main(ctx: typer.Context):
     """Grupo de comandos para la gestión de imágenes Docker."""
-
     # Si se invoca sin subcomando, mostrar menú interactivo.
     if ctx.invoked_subcommand is None:
         choices = [
@@ -100,12 +102,12 @@ def docker(ctx):
             ("deploy", "deploy"),
             ("remove prod context", "remove_prod_context"),
             ("login", "login"),
+            ("volver al menú principal", "volver"),
         ]
         selected = questionary.checkbox(
             "Selecciona las operaciones a ejecutar:",
             choices=[c[0] for c in choices],
         ).ask()
-
 
         if not selected:
             console.print("[yellow]No se seleccionaron operaciones.[/yellow]")
@@ -115,14 +117,42 @@ def docker(ctx):
         mapping = {display: internal for display, internal in choices}
         for choice_name in selected:
             op = mapping[choice_name]
-            ctx.invoke(globals()[op])  # invoca la función click correspondiente
+            if op == "build":
+                build()
+            elif op == "build_no_cache":
+                build_no_cache()
+            elif op == "save":
+                save()
+            elif op == "push":
+                push()
+            elif op == "tag":
+                tag()
+            elif op == "create_prod_context":
+                create_prod_context()
+            elif op == "deploy":
+                deploy()
+            elif op == "remove_prod_context":
+                remove_prod_context()
+            elif op == "login":
+                login()
+            elif op == "volver":
+                # Volver al menú principal
+                try:
+                    from orgm.commands.menu import menu_principal
+                    resultado = menu_principal()
+                    if resultado and resultado != "exit" and resultado != "error":
+                        # Para ejecutar el comando seleccionado, necesitaríamos modificar la app principal
+                        # Por ahora solo informamos al usuario
+                        console.print(f"[green]Volviendo a '{resultado}'...[/green]")
+                except ImportError:
+                    console.print("[yellow]No se pudo cargar el menú principal.[/yellow]")
 
 
 # ---------------------------------------------------------------------------
 # Subcomandos
 # ---------------------------------------------------------------------------
 
-@docker.command()
+@app.command()
 def build():
     """Construye la imagen Docker usando cache."""
     load_local_env()
@@ -136,7 +166,7 @@ def build():
     _docker_cmd(["docker", "build", "-t", image, "."])
 
 
-@docker.command("build-nocache")
+@app.command("build-nocache")
 def build_no_cache():
     """Construye la imagen Docker sin utilizar la cache."""
     load_local_env()
@@ -150,7 +180,7 @@ def build_no_cache():
     _docker_cmd(["docker", "build", "--no-cache", "-t", image, "."])
 
 
-@docker.command()
+@app.command()
 def save():
     """Guarda la imagen Docker en un archivo tar."""
     load_local_env()
@@ -174,7 +204,7 @@ def save():
     _docker_cmd(["docker", "save", "-o", save_path, image])
 
 
-@docker.command()
+@app.command()
 def push():
     """Envía la imagen Docker al registry configurado."""
     load_local_env()
@@ -188,7 +218,7 @@ def push():
     _docker_cmd(["docker", "push", image])
 
 
-@docker.command()
+@app.command()
 def tag():
     """Etiqueta la imagen con la etiqueta latest en el registry."""
     load_local_env()
@@ -202,7 +232,7 @@ def tag():
     _docker_cmd(["docker", "tag", current, target])
 
 
-@docker.command()
+@app.command()
 def create_prod_context():
     """Crea un contexto Docker denominado 'prod'."""
     load_local_env()
@@ -215,7 +245,7 @@ def create_prod_context():
     _docker_cmd(["docker", "context", "create", "prod", "--docker", f"host={host_str}"])
 
 
-@docker.command()
+@app.command()
 def deploy():
     """Despliega la aplicación en el contexto 'prod' usando docker compose."""
     load_local_env()
@@ -229,7 +259,7 @@ def deploy():
     # Extra: asegurarse de que el contexto existe intentando crear si falla
     try:
         _docker_cmd(["docker", "context", "inspect", "prod"])
-    except click.ClickException:
+    except typer.Exit:
         console.print("[yellow]Contexto 'prod' no existe. Creándolo...[/yellow]")
         ctx_user = os.getenv("DOCKER_HOST_USER")
         ctx_ip = os.getenv("DOCKER_HOST_IP")
@@ -237,13 +267,13 @@ def deploy():
             host_str = f"ssh://{ctx_user}@{ctx_ip}"
             _docker_cmd(["docker", "context", "create", "prod", "--docker", f"host={host_str}"])
         else:
-            raise click.ClickException("No se pudo crear contexto 'prod'. Falta DOCKER_HOST_USER o DOCKER_HOST_IP")
+            raise typer.Exit("No se pudo crear contexto 'prod'. Falta DOCKER_HOST_USER o DOCKER_HOST_IP")
 
     _docker_cmd(["docker", "--context", "prod", "pull", image])
     _docker_cmd(["docker", "--context", "prod", "compose", "up", "-d", "--remove-orphans"])
 
 
-@docker.command()
+@app.command()
 def remove_prod_context():
     """Elimina el contexto Docker 'prod'."""
     load_local_env()
@@ -252,7 +282,7 @@ def remove_prod_context():
     _docker_cmd(["docker", "context", "rm", "prod"])
 
 
-@docker.command()
+@app.command()
 def login():
     """Inicia sesión en Docker Hub usando variables de entorno y contraseña solicitada."""
     load_local_env()
@@ -264,7 +294,14 @@ def login():
 
     password = questionary.password("Introduce la contraseña de Docker Hub:").ask()
     if not password:
-        raise click.ClickException("Se requiere una contraseña para continuar.")
+        raise typer.Exit("Se requiere una contraseña para continuar.")
 
     console.print(f"[bold green]Iniciando sesión en {docker_hub_url}...[/bold green]")
-    _docker_cmd(["docker", "login", docker_hub_url, "-u", docker_hub_user, "--password-stdin"], input_text=password) 
+    _docker_cmd(["docker", "login", docker_hub_url, "-u", docker_hub_user, "--password-stdin"], input_text=password)
+
+
+# Reemplazar la exportación del grupo click por la app de typer
+docker = app
+
+if __name__ == "__main__":
+    app() 

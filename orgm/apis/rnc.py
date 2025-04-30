@@ -2,9 +2,6 @@ import requests
 import os
 from orgm.apis.header import get_headers_json
 
-
-
-
 def buscar_rnc_cliente(busqueda: str, activo: bool = True):
     RNC_URL = os.getenv("RNC_URL")
     """Busca clientes por nombre o RNC en la API."""
@@ -28,11 +25,3 @@ def buscar_rnc_cliente(busqueda: str, activo: bool = True):
         print(f"Error inesperado al buscar RNC: {e}")
         return None
 
-
-if __name__ == "__main__":
-    from dotenv import load_dotenv
-    load_dotenv()
-    RNC_URL = "http://localhost:3000"
-    # RNC_URL = "http://localhost:3000"
-    # RNC_URL = "https://rnc.orgmapp.com"
-    print(buscar_rnc_cliente("123456789"))
