@@ -62,7 +62,7 @@ class EnvEditor(App):
         self.original_content = content # Guardar contenido original
         
         # Usar Rich Syntax para resaltar .env si es posible
-        text_area = TextArea(content, id="editor", language="dotenv", theme="github-dark")
+        text_area = TextArea(content, id="editor", language="dotenv", theme="vscode_dark")
         yield text_area
         yield Footer()
         

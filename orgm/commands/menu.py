@@ -24,7 +24,7 @@ def menu_principal():
         {"name": "🔍 Buscar empresa", "value": "find-company"},
         {"name": "💱 Tasa de divisa", "value": "currency-rate"},
         {"name": "🔄 Actualizar", "value": "update"},
-        {"name": "⚙️  Verificar URLs", "value": "check"},
+        {"name": "⚙️ Verificar URLs", "value": "check"},
         {"name": "📦 Instalar", "value": "install"},
         {"name": "❓ Ayuda", "value": "help"},
         {"name": "❌ Salir", "value": "exit"}

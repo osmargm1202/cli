@@ -279,6 +279,11 @@ def formulario_cliente(cliente=None) -> Optional[Dict]:
     ).ask()
     if not nombre:
         return None # Cancelar si no hay nombre
+    # ... resto de las preguntas del formulario ...
+
+    nombre_comercial = questionary.text(
+        "Nombre comercial:", default=defaults.get("nombre_comercial", "")
+    ).ask()
 
     numero = questionary.text(
         "Número/NIF del cliente:", default=defaults.get("numero", "")
@@ -286,10 +291,7 @@ def formulario_cliente(cliente=None) -> Optional[Dict]:
     if not numero:
          return None # Cancelar si no hay número
 
-    # ... resto de las preguntas del formulario ...
-    nombre_comercial = questionary.text(
-        "Nombre comercial:", default=defaults.get("nombre_comercial", "")
-    ).ask()
+
     correo = questionary.text(
         "Correo electrónico:", default=defaults.get("correo", "")
     ).ask()
@@ -332,8 +334,8 @@ def formulario_cliente(cliente=None) -> Optional[Dict]:
     # Devolver un diccionario con los datos, usando None para campos vacíos opcionales
     return {
         "nombre": nombre,
-        "numero": numero,
         "nombre_comercial": nombre_comercial if nombre_comercial else None,
+        "numero": numero,
         "correo": correo if correo else None,
         "direccion": direccion if direccion else None,
         "ciudad": ciudad if ciudad else None,
