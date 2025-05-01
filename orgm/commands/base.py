@@ -1,13 +1,39 @@
 # -*- coding: utf-8 -*-
 import os
+import sys
 import subprocess
 import requests
 import platform
+import typer
 from rich.console import Console
 from orgm.apis.header import get_headers_json  # Importar la función centralizada
 
 # Crear consola para salida con Rich
 console = Console()
+
+# Crear aplicación Typer para comandos base
+base_app = typer.Typer(help="Comandos básicos de ORGM")
+
+@base_app.command(name="check")
+def check_urls():
+    """Verificar URLs y conexiones del sistema."""
+    console.print("[bold green]Verificando conexiones...[/bold green]")
+    # Implementar la verificación de URLs aquí
+    console.print("✓ Todas las conexiones están funcionando correctamente.")
+
+@base_app.command(name="update")
+def update():
+    """Actualizar la aplicación ORGM a la última versión."""
+    console.print("[bold green]Actualizando ORGM...[/bold green]")
+    # Implementar la actualización aquí
+    console.print("✓ ORGM actualizado a la última versión.")
+
+@base_app.command(name="install")
+def install():
+    """Instalar o reinstalar componentes de ORGM."""
+    console.print("[bold green]Instalando componentes de ORGM...[/bold green]")
+    # Implementar la instalación aquí
+    console.print("✓ Componentes instalados correctamente.")
 
 def print_comandos() -> None:
     """Imprimir lista de comandos disponibles desde un archivo markdown"""

@@ -32,6 +32,29 @@ def initialize():
     headers["Prefer"] = "return=representation"
 
 
+def obtener_id_maximo() -> int:
+    """
+    Obtiene el ID máximo de la tabla cliente.
+    
+    Returns:
+        int: ID máximo + 1 (siguiente ID disponible).
+    """
+    # Asegurar que las variables estén inicializadas
+    if headers is None:
+        initialize()
+    
+    import requests
+    
+    try:
+        response = requests.get(f"{POSTGREST_URL}/cliente?select=id", headers=headers, timeout=10)
+        response.raise_for_status()
+        clientes = response.json()
+        return max(cliente['id'] for cliente in clientes) + 1 if clientes else 1
+    except Exception as e:
+        console.print(f"[bold red]Error al obtener ID máximo de clientes: {e}[/bold red]")
+        return 1
+
+
 def obtener_clientes() -> List[Cliente]:
     """Obtiene todos los clientes desde PostgREST"""
     # Asegurar que las variables estén inicializadas
@@ -100,6 +123,10 @@ def crear_cliente(cliente_data: Dict) -> Optional[Cliente]:
                 "[bold red]Error: El nombre del cliente es obligatorio[/bold red]"
             )
             return None
+            
+        # Asignar ID si no está definido
+        if "id" not in cliente_data:
+            cliente_data["id"] = obtener_id_maximo()
 
         response = requests.post(
             f"{POSTGREST_URL}/cliente", headers=headers, json=cliente_data, timeout=10

@@ -1,42 +1,33 @@
+# -*- coding: utf-8 -*-
+# Main ORGM CLI application
+import os
 import sys
 import typer
-from rich.console import Console
-from dotenv import load_dotenv
 from pathlib import Path
-import os # Added for potential path debugging if needed, but Path should suffice
-
-
-# Import placeholder modules (keep for now)
-# from orgm.apps.clientes import clientes # Eliminar placeholder
-# from orgm.apps.proyectos import proyecto # Eliminar placeholder
-# from orgm.apps.cotizaciones import cotizacion # Eliminar placeholder
-# from orgm.apps.docker import docker as docker_cmd # Eliminar placeholder
+from dotenv import load_dotenv
+from rich.console import Console
+from typing import List, Optional
 
 # Importar los grupos de comandos de las aplicaciones
 from orgm.apps.clientes import clientes as clientes_app
 from orgm.apps.proyectos import proyecto as proyecto_app
 from orgm.apps.cotizaciones import cotizacion as cotizacion_app
 from orgm.apps.docker import docker as docker_app
+from orgm.apps.rnc_app import rnc_app
 
-# Import command functions from new modules
-from orgm.commands.base import check_urls, update, install
-from orgm.commands.env import env_edit, env_file
-from orgm.commands.pdf import pdf_firmar, pdf_firmar_interactivo
-from orgm.commands.ai import ai_prompt, ai_configs, ai_config_upload, ai_config_create, ai_config_edit
-from orgm.commands.pago import pago_registrar_command, pago_listar_command, pago_asignar_command
+# Importar los typer apps para los módulos
+from orgm.apps.env_app import env_app, env_menu
+from orgm.apps.pdf_app import pdf_app, pdf_menu
+from orgm.apps.ai_app import ai_app, ai_menu
+from orgm.apps.pago_app import pago_app, pago_menu
 
-# Nuevos comandos API
-from orgm.commands.rnc import buscar_empresa_command
-from orgm.commands.divisa import tasa_divisa_command
+# Importar comandos básicos
+from orgm.commands.base import base_app
+# Importar comandos de API
+from orgm.commands.api_commands import api_app
 
 # Importar el menú principal
 from orgm.commands.menu import menu_principal
-
-# También importamos los submenús
-from orgm.apps.env_app import env_menu
-from orgm.apps.pdf_app import pdf_menu
-from orgm.apps.ai_app import ai_menu
-from orgm.apps.pago_app import pago_menu
 
 # Crear consola para salida con Rich
 console = Console()
@@ -50,34 +41,26 @@ class SalirException(Exception):
 class OrgmCLI:
     def __init__(self):
         # Crear la aplicación Typer
-        # El mensaje de ayuda se maneja mediante el callback ahora
         self.app = typer.Typer(
-            # help="ORGM CLI - Herramienta de gestión organizacional", # Eliminado help de aquí
             context_settings={"help_option_names": ["-h", "--help"]},
             no_args_is_help=False, # Evita la ayuda predeterminada de Typer sin argumentos
-            add_completion=False # Opcional: deshabilitar la autocompletación si no se usa
+            add_completion=True # Opcional: deshabilitar la autocompletación si no se usa
         )
         
-        self.env_app = typer.Typer(help="Administrar variables de entorno")
-        self.pdf_app = typer.Typer(help="Operaciones con archivos PDF")
-        self.ai_app = typer.Typer(help="Operaciones relacionadas con la IA")
-        self.pago_app = typer.Typer(help="Gestión de pagos y asignaciones")
-        # No necesitamos typer apps para clientes, proyectos, etc., ya que son grupos de click
-        
-        # Configurar subcomandos
-        self.app.add_typer(self.env_app, name="env")
-        self.app.add_typer(self.pdf_app, name="pdf")
-        self.app.add_typer(self.ai_app, name="ai")
-        self.app.add_typer(self.pago_app, name="payment")
-        # Añadir los grupos de comandos de las aplicaciones usando add_typer
+        # Añadir todos los módulos usando add_typer
+        self.app.add_typer(env_app, name="env")
+        self.app.add_typer(pdf_app, name="pdf")
+        self.app.add_typer(ai_app, name="ai")
+        self.app.add_typer(pago_app, name="payment")
         self.app.add_typer(clientes_app, name="client")
         self.app.add_typer(proyecto_app, name="project")
         self.app.add_typer(cotizacion_app, name="quotation")
         self.app.add_typer(docker_app, name="docker")
+        self.app.add_typer(base_app, name="base")
+        self.app.add_typer(api_app, name="api")
         
-        # Configurar comandos individuales (los que quedan en el nivel superior)
-        self.configurar_comandos_principales() # Renombrar para claridad
-        self.configurar_callback() # Llamar al nuevo método para configurar el callback
+        # Configurar el callback principal
+        self.configurar_callback()
         
         # Cargar variables de entorno
         self.cargar_variables_entorno()
@@ -155,40 +138,12 @@ class OrgmCLI:
             # Try loading from current working directory as fallback
             load_dotenv(override=True)
             if not Path(".env").exists():
-                 # Optional: Warn if no .env found
-                 # console.print("[yellow]Advertencia: No se encontró archivo .env[/yellow]")
-                 pass 
-
-    def configurar_comandos_principales(self) -> None:
-        """Configurar los comandos principales de la aplicación (no los grupos)"""
-        # Comandos principales - Use imported functions
-        self.app.command(name="check")(check_urls)
-        self.app.command(name="update")(update)
-        self.app.command(name="install")(install)
-        
-        # Comandos API
-        self.app.command(name="find-company")(buscar_empresa_command)
-        self.app.command(name="currency-rate")(tasa_divisa_command)
-        
-        # Comandos de env - Use imported functions
-        self.env_app.command(name="edit")(env_edit)
-        self.env_app.command(name="file")(env_file)
-        
-        # Comandos de PDF - Use imported functions
-        self.pdf_app.command(name="sign-file")(pdf_firmar)
-        self.pdf_app.command(name="sign")(pdf_firmar_interactivo)
-        
-        # Comandos de AI - Use imported functions
-        self.ai_app.command(name="prompt")(ai_prompt)
-        self.ai_app.command(name="configs")(ai_configs)
-        self.ai_app.command(name="upload")(ai_config_upload)
-        self.ai_app.command(name="create")(ai_config_create)
-        self.ai_app.command(name="edit")(ai_config_edit)
-        
-        # Comandos de Pagos - Use imported functions
-        self.pago_app.command(name="register")(pago_registrar_command)
-        self.pago_app.command(name="list")(pago_listar_command)
-        self.pago_app.command(name="assign")(pago_asignar_command)
+                # No .env found, run env edit command
+                console.print("[yellow]No se encontró archivo .env. Ejecutando 'orgm env edit'...[/yellow]")
+                args_originales = sys.argv.copy()
+                sys.argv = [sys.argv[0], "env", "edit"] 
+                self.app()
+                sys.argv = args_originales
 
 # Inicializar y ejecutar la CLI 
 def main():

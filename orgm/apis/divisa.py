@@ -31,4 +31,4 @@ if __name__ == "__main__":
     from dotenv import load_dotenv
     load_dotenv()
     API_URL = "http://10.0.0.13:3011" 
-    print(obtener_tasa_divisa("USD", "DOP", 1))
+    print(obtener_tasa_divisa("USD", "RD$", 1))

@@ -18,7 +18,7 @@ def registrar_pago(
     
     Args:
         id_cliente: ID del cliente al que pertenece el pago
-        moneda: Moneda del pago (ej. DOP, USD)
+        moneda: Moneda del pago (ej. RD$, USD)
         monto: Monto del pago
         fecha: Fecha del pago (formato YYYY-MM-DD)
         comprobante: Número de comprobante o referencia (opcional)
@@ -40,6 +40,7 @@ def registrar_pago(
     
     # Datos del pago a registrar
     pago_data = {
+        "id": obtener_id_maximo(),
         "id_cliente": id_cliente,
         "moneda": moneda,
         "monto": monto,
@@ -104,6 +105,27 @@ def obtener_pagos(id_cliente: Optional[int] = None) -> List[Dict]:
         console.print(f"[bold red]Error inesperado al obtener pagos: {e}[/bold red]")
         return []
 
+
+def obtener_id_maximo() -> int:
+    """
+    Obtiene el ID máximo de la tabla pagorecibido.
+    
+    Returns:
+        int: ID máximo.
+    """
+
+    POSTGREST_URL = os.getenv("POSTGREST_URL")
+    if not POSTGREST_URL:
+        console.print(
+            "[bold red]Error: POSTGREST_URL no está definida en las variables de entorno.[/bold red]"
+        )
+        return 0
+    
+    headers = get_headers_json()
+    response = requests.get(f"{POSTGREST_URL}/pagorecibido?select=id", headers=headers)
+    response.raise_for_status()
+    pagos = response.json()
+    return max(pago['id'] for pago in pagos) + 1 if pagos else 1
 
 def asignar_pago_a_cotizacion(
     id_pago: int, 
@@ -196,3 +218,18 @@ def obtener_asignaciones_pago(id_cotizacion: Optional[int] = None) -> List[Dict]
     except Exception as e:
         console.print(f"[bold red]Error inesperado al obtener asignaciones: {e}[/bold red]")
         return [] 
+
+
+if __name__ == "__main__":
+    # Ejemplo de uso\
+    id = obtener_id_maximo()
+    # id_cliente = 3
+    # moneda = "RD$"
+    # monto = 140000.00
+    # fecha = "2025-01-27"
+    # comprobante = "1234567890"
+
+    # registrar_pago(id_cliente, moneda, monto, fecha, comprobante)
+    # pagos = obtener_pagos(id_cliente)
+    # print(pagos)
+

@@ -4,8 +4,28 @@ from rich.console import Console
 import typer
 import sys
 
+# Importar funciones de commands
+from orgm.commands.env import env_edit, env_file
+
 # Crear consola para salida con Rich
 console = Console()
+
+# Crear la aplicación Typer para env
+env_app = typer.Typer(help="Administrar variables de entorno")
+
+# Configurar comandos de env
+env_app.command(name="edit")(env_edit)
+env_app.command(name="file")(env_file)
+
+# Configurar callback para mostrar menú si no se especifican subcomandos
+@env_app.callback(invoke_without_command=True)
+def env_callback(ctx: typer.Context):
+    """
+    Administra las variables de entorno. Si no se especifica un subcomando, muestra un menú interactivo.
+    """
+    if ctx.invoked_subcommand is None:
+        # Ejecutar el menú de variables de entorno
+        env_menu()
 
 def env_menu():
     """Menú interactivo para comandos de variables de entorno."""
@@ -40,14 +60,12 @@ def env_menu():
             return menu_principal()
         elif comando == "env edit":
             # Ejecutar comando directamente
-            from orgm.commands.env import env_edit
             env_edit()
             return env_menu()  # Volver al mismo menú después
         elif comando == "env_file":
             # Solicitar entrada adicional para el archivo
             archivo = questionary.text("Introduce la ruta al archivo:").ask()
             if archivo:
-                from orgm.commands.env import env_file
                 env_file(archivo)
             return env_menu()  # Volver al mismo menú después
             

@@ -198,12 +198,7 @@ def menu_principal():
 
         if accion == "Volver al menú principal":
             # Intentar volver al menú principal de orgm si existe
-            try:
-                from orgm.commands.menu import menu_principal
-                return menu_principal()
-            except ImportError:
-                # Si no se puede importar, simplemente salimos
-                break
+            return "exit"
 
         if accion == "Ver todos los proyectos":
             with spinner("Listando proyectos..."):

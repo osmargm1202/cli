@@ -454,13 +454,8 @@ def menu_clientes():
         ).ask()
 
         if accion == "Volver al menú principal":
-            # Intentar volver al menú principal de orgm si existe
-            try:
-                from orgm.commands.menu import menu_principal
-                return menu_principal()
-            except ImportError:
-                # Si no se puede importar, simplemente salimos
-                break
+            return "exit"
+        
         elif accion == "Listar todos los clientes":
             with spinner("Listando clientes..."):
                 clientes_list = obtener_clientes()

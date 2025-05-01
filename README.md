@@ -24,3 +24,4 @@ wget -qO- https://astral.sh/uv/install.sh | sh
 uv tool install "git+https://github.com/osmargm1202/cli.git"
 
 ```
+

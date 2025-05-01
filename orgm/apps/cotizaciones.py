@@ -524,8 +524,8 @@ def formulario_cotizacion(cotizacion=None) -> Dict:
         default="API",
     ).ask()
     if metodo_tasa == "API":
-        with spinner("Obteniendo tasa de cambio USD->DOP..."):
-            tasa = obtener_tasa_divisa("USD", "DOP", 1)
+        with spinner("Obteniendo tasa de cambio USD->RD$..."):
+            tasa = obtener_tasa_divisa("USD", "RD$", 1)
         datos["tasa_moneda"] = tasa or 1.0
     else:
         tasa_str = questionary.text("Tasa de cambio:", default=str(defaults["tasa_moneda"])).ask()
@@ -601,13 +601,7 @@ def menu_principal():
         ).ask()
 
         if accion == "Volver al menú principal":
-            # Intentar volver al menú principal de orgm si existe
-            try:
-                from orgm.commands.menu import menu_principal
-                return menu_principal()
-            except ImportError:
-                # Si no se puede importar, simplemente salimos
-                break
+            return "exit"
 
         if accion == "Ver todas las cotizaciones":
             cotizaciones = obtener_cotizaciones()

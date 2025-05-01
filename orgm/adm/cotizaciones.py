@@ -38,6 +38,29 @@ def initialize():
     return True
 
 
+def obtener_id_maximo() -> int:
+    """
+    Obtiene el ID máximo de la tabla cotizacion.
+    
+    Returns:
+        int: ID máximo + 1 (siguiente ID disponible).
+    """
+    # Asegurar que las variables estén inicializadas
+    if headers is None:
+        initialize()
+    
+    import requests
+    
+    try:
+        response = requests.get(f"{POSTGREST_URL}/cotizacion?select=id", headers=headers)
+        response.raise_for_status()
+        cotizaciones = response.json()
+        return max(cotizacion['id'] for cotizacion in cotizaciones) + 1 if cotizaciones else 1
+    except Exception as e:
+        console.print(f"[bold red]Error al obtener ID máximo de cotizaciones: {e}[/bold red]")
+        return 1
+
+
 def obtener_cotizaciones() -> List[Dict]:
     """
     Obtiene todas las cotizaciones.
@@ -121,6 +144,10 @@ def crear_cotizacion(datos: Dict) -> Optional[Dict]:
         # Asegurar que tenga fecha de creación
         if "fecha_creacion" not in datos:
             datos["fecha_creacion"] = datetime.now().isoformat()
+            
+        # Asignar ID si no está definido
+        if "id" not in datos:
+            datos["id"] = obtener_id_maximo()
             
         response = requests.post(f"{POSTGREST_URL}/cotizacion", json=datos, headers=headers)
         response.raise_for_status()

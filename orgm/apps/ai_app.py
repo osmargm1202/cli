@@ -4,20 +4,43 @@ from rich.console import Console
 import typer
 import sys
 
+# Importar funciones de commands
+from orgm.commands.ai import ai_prompt, ai_configs, ai_config_upload, ai_config_create, ai_config_edit
+
 # Crear consola para salida con Rich
 console = Console()
 
+# Crear la aplicación Typer para AI
+ai_app = typer.Typer(help="Operaciones relacionadas con la IA")
+
+# Comandos de AI
+ai_app.command(name="prompt")(ai_prompt)
+ai_app.command(name="configs")(ai_configs)
+ai_app.command(name="upload")(ai_config_upload)
+ai_app.command(name="create")(ai_config_create)
+ai_app.command(name="edit")(ai_config_edit)
+
+# Configurar callback para 'ai' para mostrar menú si no se especifican subcomandos
+@ai_app.callback(invoke_without_command=True)
+def ai_callback(ctx: typer.Context):
+    """
+    Operaciones relacionadas con la IA. Si no se especifica un subcomando, muestra un menú interactivo.
+    """
+    if ctx.invoked_subcommand is None:
+        # Ejecutar el menú de IA
+        ai_menu()
+
 def ai_menu():
-    """Menú interactivo para comandos relacionados con IA."""
+    """Menú interactivo para comandos de IA."""
     
-    console.print("[bold blue]===== Menú Inteligencia Artificial =====[/bold blue]")
+    console.print("[bold blue]===== Menú de Inteligencia Artificial =====[/bold blue]")
     
     opciones = [
-        {"name": "💬 Enviar prompt a la IA", "value": "prompt"},
-        {"name": "📋 Listar configuraciones de IA", "value": "configs"},
-        {"name": "📤 Subir configuración", "value": "upload"},
-        {"name": "✏️ Crear nueva configuración", "value": "create"},
-        {"name": "🔄 Editar configuración existente", "value": "edit"},
+        {"name": "🤖 Hacer consulta a la IA", "value": "ai prompt"},
+        {"name": "📋 Listar configuraciones de IA", "value": "ai configs"},
+        {"name": "📤 Subir configuración de IA", "value": "ai upload"},
+        {"name": "✏️ Crear configuración de IA", "value": "ai create"},
+        {"name": "📝 Editar configuración de IA", "value": "ai edit"},
         {"name": "⬅️ Volver al menú principal", "value": "volver"},
         {"name": "❌ Salir", "value": "exit"}
     ]
@@ -41,67 +64,33 @@ def ai_menu():
         elif comando == "volver":
             from orgm.commands.menu import menu_principal
             return menu_principal()
-        elif comando == "prompt":
-            # Solicitar el prompt y la configuración
-            prompt_text = questionary.text(
-                "Ingrese su prompt para la IA:",
-                multiline=True
-            ).ask()
-            
-            if not prompt_text:
-                console.print("[yellow]Operación cancelada: No se especificó un prompt[/yellow]")
-                return ai_menu()
-                
-            # Mostrar las configuraciones disponibles
-            from orgm.commands.ai import ai_configs
-            console.print("\nConfiguraciones disponibles:")
-            ai_configs()
-            
-            config_name = questionary.text(
-                "Nombre de la configuración a usar (default para usar la predeterminada):",
-                default="default"
-            ).ask()
-            
-            # Ejecutar el comando de prompt
-            from orgm.commands.ai import ai_prompt
-            ai_prompt([prompt_text], config_name)
-            
-            return ai_menu()  # Volver al mismo menú después
-            
-        elif comando == "configs":
+        elif comando == "ai prompt":
+            # Ejecutar comando de prompt de IA
+            consulta = questionary.text("Introduce tu consulta para la IA:").ask()
+            if consulta:
+                ai_prompt(consulta)
+            return ai_menu()
+        elif comando == "ai configs":
             # Listar configuraciones
-            from orgm.commands.ai import ai_configs
             ai_configs()
-            
-            # Esperar a que el usuario presione Enter para continuar
-            input("\nPresione Enter para continuar...")
             return ai_menu()
-            
-        elif comando == "upload":
+        elif comando == "ai upload":
             # Subir configuración
-            from orgm.commands.ai import ai_config_upload
-            ai_config_upload()
-            
-            # Esperar a que el usuario presione Enter para continuar
-            input("\nPresione Enter para continuar...")
+            ruta = questionary.text("Introduce la ruta al archivo de configuración:").ask()
+            if ruta:
+                ai_config_upload(ruta)
             return ai_menu()
-            
-        elif comando == "create":
+        elif comando == "ai create":
             # Crear configuración
-            from orgm.commands.ai import ai_config_create
-            ai_config_create()
-            
-            # Esperar a que el usuario presione Enter para continuar
-            input("\nPresione Enter para continuar...")
+            nombre = questionary.text("Nombre de la configuración:").ask()
+            if nombre:
+                ai_config_create(nombre)
             return ai_menu()
-            
-        elif comando == "edit":
+        elif comando == "ai edit":
             # Editar configuración
-            from orgm.commands.ai import ai_config_edit
-            ai_config_edit()
-            
-            # Esperar a que el usuario presione Enter para continuar
-            input("\nPresione Enter para continuar...")
+            nombre = questionary.text("Nombre de la configuración a editar:").ask()
+            if nombre:
+                ai_config_edit(nombre)
             return ai_menu()
             
     except Exception as e:

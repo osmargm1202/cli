@@ -5,7 +5,7 @@ from datetime import datetime
 import questionary
 from rich.console import Console
 from rich.table import Table
-from orgm.apis.pago import registrar_pago, obtener_pagos, asignar_pago_a_cotizacion
+from orgm.adm.pago import registrar_pago, obtener_pagos, asignar_pago_a_cotizacion
 from orgm.adm.clientes import obtener_clientes, obtener_cliente
 from orgm.adm.cotizaciones import cotizaciones_por_cliente, obtener_cotizacion
 from orgm.stuff.spinner import spinner
@@ -15,7 +15,7 @@ console = Console()
 def pago_registrar_command(
     id_cliente: int = typer.Argument(..., help="ID del cliente asociado al pago"),
     monto: float = typer.Argument(..., help="Monto del pago"),
-    moneda: str = typer.Option("DOP", help="Moneda del pago (ej. DOP, USD)"),
+    moneda: str = typer.Option("RD$", help="Moneda del pago (ej. RD$, USD)"),
     fecha: str = typer.Option(None, help="Fecha del pago en formato YYYY-MM-DD (por defecto hoy)"),
     comprobante: str = typer.Option("", help="Número de comprobante o referencia")
 ):
@@ -64,7 +64,7 @@ def pago_registrar_command(
         opciones = []
         for cot in cotizaciones:
             opciones.append({
-                "name": f"ID: {cot.get('id')} - {cot.get('descripcion', 'Sin descripción')[:30]}... - Total: {cot.get('total')} {cot.get('moneda', 'DOP')}",
+                "name": f"ID: {cot.get('id')} - {cot.get('descripcion', 'Sin descripción')[:30]}... - Total: {cot.get('total')} {cot.get('moneda', 'RD$')}",
                 "value": str(cot.get('id'))
             })
         
@@ -123,7 +123,7 @@ def pago_listar_command(
             str(pago.get("id", "N/A")),
             clientes.get(pago.get("id_cliente"), f"Cliente {pago.get('id_cliente')}"),
             f"{pago.get('monto', 0):,.2f}",
-            pago.get("moneda", "DOP"),
+            pago.get("moneda", "RD$"),
             pago.get("fecha", "N/A"),
             pago.get("comprobante", "")
         )

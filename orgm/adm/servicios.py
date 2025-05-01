@@ -115,6 +115,7 @@ def crear_servicio(
     import requests
     
     datos_servicio = {
+        "id": obtener_id_maximo_servicios(),
         "concepto": concepto,
         "descripcion": descripcion,
         "tiempo": tiempo,
@@ -137,6 +138,30 @@ def crear_servicio(
         console.print(f"[bold red]Error inesperado: {e}[/bold red]")
         return None
 
+
+def obtener_id_maximo_servicios() -> int:
+    """
+    Obtiene el ID máximo de la tabla servicio.
+
+    Returns:
+        int: ID máximo.
+    """
+    if headers is None:
+        initialize()
+
+    import requests
+
+    POSTGREST_URL = os.getenv("POSTGREST_URL")
+    if not POSTGREST_URL:
+        console.print(
+            "[bold red]Error: POSTGREST_URL no está definida en las variables de entorno.[/bold red]"
+        )
+        return 0
+    
+    response = requests.get(f"{POSTGREST_URL}/servicio?select=id", headers=headers)
+    response.raise_for_status()
+    servicios = response.json()
+    return max(servicio['id'] for servicio in servicios) + 1 if servicios else 1
 
 def actualizar_servicio(
     servicio_id: int,

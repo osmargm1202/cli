@@ -42,6 +42,29 @@ def initialize():
     return True
 
 
+def obtener_id_maximo() -> int:
+    """
+    Obtiene el ID máximo de la tabla proyecto.
+    
+    Returns:
+        int: ID máximo + 1 (siguiente ID disponible).
+    """
+    # Asegurar que las variables estén inicializadas
+    if headers is None:
+        initialize()
+    
+    import requests
+    
+    try:
+        response = requests.get(f"{POSTGREST_URL}/proyecto?select=id", headers=headers, timeout=10)
+        response.raise_for_status()
+        proyectos = response.json()
+        return max(proyecto['id'] for proyecto in proyectos) + 1 if proyectos else 1
+    except Exception as e:
+        console.print(f"[bold red]Error al obtener ID máximo de proyectos: {e}[/bold red]")
+        return 1
+
+
 def obtener_proyectos() -> List[Proyecto]:
     """Obtiene todos los proyectos desde PostgREST"""
     # Asegurar que las variables estén inicializadas
@@ -119,6 +142,10 @@ def crear_proyecto(proyecto_data: Dict) -> Optional[Proyecto]:
             )
             if descripcion:
                 proyecto_data["descripcion"] = descripcion
+                
+        # Asignar ID si no está definido
+        if "id" not in proyecto_data:
+            proyecto_data["id"] = obtener_id_maximo()
 
         response = requests.post(
             f"{POSTGREST_URL}/proyecto", headers=headers, json=proyecto_data, timeout=10
