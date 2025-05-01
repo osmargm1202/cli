@@ -9,46 +9,45 @@ from orgm.adm.servicios import obtener_servicios
 from orgm.apis.ai import generate_project_description
 import os, requests
 from orgm.adm.clientes import buscar_clientes
-from orgm.adm.cotizaciones import cotizaciones_por_cliente
+from orgm.adm.cotizaciones import cotizaciones_por_cliente as adm_cotizaciones_por_cliente
 from orgm.adm.proyectos import buscar_proyectos, Proyecto
 from orgm.adm.db import Cotizacion
 from orgm.stuff.spinner import spinner
 from orgm.apis.header import get_headers_json
-
-console = Console()
-
-import os
 from datetime import datetime
-from typing import Dict, List, Optional, Union
-
-import requests
 from dotenv import load_dotenv
-from rich.console import Console
-from rich.table import Table
-from orgm.adm.db import Cotizacion
 
 console = Console()
-load_dotenv(override=True)
 
-# Obtener la URL de PostgREST desde las variables de entorno
-POSTGREST_URL = os.getenv("POSTGREST_URL")
-if not POSTGREST_URL:
-    console.print(
-        "[bold red]Error: POSTGREST_URL no está definida en las variables de entorno[/bold red]"
-    )
-    exit(1)
+# Variables globales que inicializaremos en cada función
+POSTGREST_URL = None
+headers = None
 
-# Configuración de los headers usando la función centralizada
-headers = get_headers_json()
-
-# Verificar si se obtuvieron las credenciales (opcional)
-if "CF-Access-Client-Id" not in headers:
-    console.print(
-        "[bold yellow]Advertencia: Credenciales de Cloudflare Access no encontradas o no configuradas.[/bold yellow]"
-    )
-    console.print(
-        "[bold yellow]Las consultas no incluirán autenticación de Cloudflare Access.[/bold yellow]"
-    )
+def initialize():
+    """Inicializa las variables que anteriormente estaban a nivel de módulo"""
+    global POSTGREST_URL, headers
+    
+    # Cargar variables de entorno
+    load_dotenv(override=True)
+    
+    # Obtener URL de PostgREST
+    POSTGREST_URL = os.getenv("POSTGREST_URL")
+    if not POSTGREST_URL:
+        console.print(
+            "[bold yellow]Advertencia: POSTGREST_URL no está definida en las variables de entorno.[/bold yellow]"
+        )
+    
+    # Obtener headers usando la función centralizada
+    headers = get_headers_json()
+    
+    # Verificar si se obtuvieron las credenciales (opcional)
+    if "CF-Access-Client-Id" not in headers:
+        console.print(
+            "[bold yellow]Advertencia: Credenciales de Cloudflare Access no encontradas o no configuradas.[/bold yellow]"
+        )
+        console.print(
+            "[bold yellow]Las consultas no incluirán autenticación de Cloudflare Access.[/bold yellow]"
+        )
 
 
 def obtener_cotizaciones() -> List[Dict]:
@@ -58,6 +57,15 @@ def obtener_cotizaciones() -> List[Dict]:
     Returns:
         List[Dict]: Lista de cotizaciones.
     """
+    # Asegurar que las variables estén inicializadas
+    if POSTGREST_URL is None:
+        initialize()
+        if not POSTGREST_URL:
+            console.print(
+                "[bold red]No se puede continuar sin la URL de PostgREST[/bold red]"
+            )
+            return []
+            
     try:
         # Seleccionar todos los campos de cotizacion y campos específicos de cliente/proyecto
         select_query = "select=*,cliente(id,nombre),proyecto(id,nombre_proyecto)"
@@ -88,6 +96,15 @@ def obtener_cotizacion(id_cotizacion: int) -> Optional[Dict]:
     Returns:
         Optional[Dict]: Datos de la cotización o None si no se encuentra.
     """
+    # Asegurar que las variables estén inicializadas
+    if POSTGREST_URL is None:
+        initialize()
+        if not POSTGREST_URL:
+            console.print(
+                "[bold red]No se puede continuar sin la URL de PostgREST[/bold red]"
+            )
+            return None
+            
     try:
         select_query = "select=*,cliente(id,nombre),proyecto(id,nombre_proyecto)"
         url = f"{POSTGREST_URL}/cotizacion?id=eq.{id_cotizacion}&{select_query}"
@@ -117,6 +134,15 @@ def crear_cotizacion(datos: Dict) -> Optional[Dict]:
     Returns:
         Optional[Dict]: Cotización creada o None si falla.
     """
+    # Asegurar que las variables estén inicializadas
+    if POSTGREST_URL is None:
+        initialize()
+        if not POSTGREST_URL:
+            console.print(
+                "[bold red]No se puede continuar sin la URL de PostgREST[/bold red]"
+            )
+            return None
+            
     try:
         # Asegurar que tenga fecha de creación
         if "fecha_creacion" not in datos:
@@ -148,6 +174,15 @@ def actualizar_cotizacion(id_cotizacion: int, datos: Dict) -> bool:
     Returns:
         bool: True si la actualización fue exitosa, False en caso contrario.
     """
+    # Asegurar que las variables estén inicializadas
+    if POSTGREST_URL is None:
+        initialize()
+        if not POSTGREST_URL:
+            console.print(
+                "[bold red]No se puede continuar sin la URL de PostgREST[/bold red]"
+            )
+            return False
+            
     try:
         # Remover id si está en los datos para evitar conflictos
         if "id" in datos:
@@ -182,6 +217,15 @@ def eliminar_cotizacion(id_cotizacion: int) -> bool:
     Returns:
         bool: True si la eliminación fue exitosa, False en caso contrario.
     """
+    # Asegurar que las variables estén inicializadas
+    if POSTGREST_URL is None:
+        initialize()
+        if not POSTGREST_URL:
+            console.print(
+                "[bold red]No se puede continuar sin la URL de PostgREST[/bold red]"
+            )
+            return False
+            
     try:
         with spinner(f"Eliminando cotización ID: {id_cotizacion}..."):
             response = requests.delete(
@@ -203,18 +247,29 @@ def eliminar_cotizacion(id_cotizacion: int) -> bool:
 
 def buscar_cotizaciones(termino: str) -> List[Dict]:
     """
-    Busca cotizaciones que coincidan con el término de búsqueda.
+    Busca cotizaciones por término en el nombre, descripción, etc.
     
     Args:
         termino (str): Término de búsqueda.
         
     Returns:
-        List[Dict]: Lista de cotizaciones que coinciden con la búsqueda.
+        List[Dict]: Lista de cotizaciones que coinciden con el término.
     """
+    # Asegurar que las variables estén inicializadas
+    if POSTGREST_URL is None:
+        initialize()
+        if not POSTGREST_URL:
+            console.print(
+                "[bold red]No se puede continuar sin la URL de PostgREST[/bold red]"
+            )
+            return []
+            
     try:
-        # Buscar en varios campos
-        query = f"?or=(numero.ilike.*{termino}*,descripcion.ilike.*{termino}*)"
-        response = requests.get(f"{POSTGREST_URL}/cotizacion{query}", headers=headers)
+        select_query = "select=*,cliente(id,nombre),proyecto(id,nombre_proyecto)"
+        # Buscar en nombre_proyecto, descripcion, y nombre de cliente
+        url = f"{POSTGREST_URL}/cotizacion?or=(descripcion.ilike.*{termino}*,cliente.nombre.ilike.*{termino}*,proyecto.nombre_proyecto.ilike.*{termino}*)&{select_query}"
+        with spinner(f"Buscando cotizaciones con término: '{termino}'..."):
+            response = requests.get(url, headers=headers)
         response.raise_for_status()
         return response.json()
     except requests.exceptions.HTTPError as e:
@@ -234,37 +289,13 @@ def cotizaciones_por_cliente(id_cliente: int, limite: Optional[int] = None) -> L
     
     Args:
         id_cliente (int): ID del cliente.
-        limite (Optional[int]): Límite de resultados a devolver.
+        limite (Optional[int]): Cantidad máxima de cotizaciones a retornar.
         
     Returns:
         List[Dict]: Lista de cotizaciones del cliente.
     """
-    try:
-        # Seleccionar todos los campos de cotizacion y campos específicos de cliente/proyecto
-        select_query = "select=*,cliente(id,nombre),proyecto(id,nombre_proyecto)"
-        # Construir la URL con el ID del cliente y el select
-        url = f"{POSTGREST_URL}/cotizacion?id_cliente=eq.{id_cliente}&{select_query}"
-        
-        # Agregar límite si se especifica
-        if limite is not None:
-            url += f"&limit={limite}"
-            
-        # Ordenar por fecha de creación descendente
-        url += "&order=fecha.desc"
-        
-        with spinner(f"Obteniendo cotizaciones del cliente ID: {id_cliente}..."):
-            response = requests.get(url, headers=headers)
-        response.raise_for_status()
-        return response.json()
-    except requests.exceptions.HTTPError as e:
-        console.print(f"[bold red]Error en la solicitud HTTP: {e}[/bold red]")
-        return []
-    except requests.exceptions.RequestException as e:
-        console.print(f"[bold red]Error en la conexión: {e}[/bold red]")
-        return []
-    except Exception as e:
-        console.print(f"[bold red]Error inesperado: {e}[/bold red]")
-        return []
+    # Usamos la función del módulo adm en lugar de reimplementarla
+    return adm_cotizaciones_por_cliente(id_cliente, limite)
 
 
 def mostrar_tabla_cotizaciones(cotizaciones: List[Dict]) -> None:
@@ -576,7 +607,7 @@ def menu_principal():
                 return menu_principal()
             except ImportError:
                 # Si no se puede importar, simplemente salimos
-            break
+                break
 
         if accion == "Ver todas las cotizaciones":
             cotizaciones = obtener_cotizaciones()
@@ -835,48 +866,36 @@ def mostrar_cotizacion_detalle(cotizacion):
 
 def cotizaciones_por_proyecto(id_proyecto: int, limite: Optional[int] = None) -> List[Dict]:
     """
-    Obtiene las cotizaciones de un proyecto específico.
+    Obtiene las cotizaciones relacionadas con un proyecto específico.
     
     Args:
         id_proyecto (int): ID del proyecto.
-        limite (Optional[int]): Límite de resultados a devolver.
+        limite (Optional[int]): Cantidad máxima de cotizaciones a retornar.
         
     Returns:
         List[Dict]: Lista de cotizaciones del proyecto.
     """
-    try:
-        # Seleccionar todos los campos de cotizacion, y campos específicos de cliente y proyecto
-        select_query = "select=*,cliente(id,nombre),proyecto(id,nombre_proyecto)"
-        # Aseguramos que estamos buscando correctamente por id_proyecto
-        url = f"{POSTGREST_URL}/cotizacion?id_proyecto=eq.{id_proyecto}&{select_query}"
-        
-        # Agregar límite si se especifica
-        if limite is not None:
-            url += f"&limit={limite}"
-            
-        # Ordenar por fecha de creación descendente
-        url += "&order=fecha.desc"
-        
-        # Imprimir la URL para depuración
-        console.print(f"[cyan]DEBUG: URL para cotizaciones por proyecto: {url}[/cyan]")
-        
-        with spinner(f"Obteniendo cotizaciones del proyecto ID: {id_proyecto}..."):
-            response = requests.get(url, headers=headers)
-        
-        # Verificar el código de estado
-        if response.status_code != 200:
-            console.print(f"[bold red]Error HTTP {response.status_code}: {response.text}[/bold red]")
+    # Asegurar que las variables estén inicializadas
+    if POSTGREST_URL is None:
+        initialize()
+        if not POSTGREST_URL:
+            console.print(
+                "[bold red]No se puede continuar sin la URL de PostgREST[/bold red]"
+            )
             return []
             
-        # Intentar obtener el contenido JSON
+    try:
+        select_query = "select=*,cliente(id,nombre),proyecto(id,nombre_proyecto)"
+        url = f"{POSTGREST_URL}/cotizacion?id_proyecto=eq.{id_proyecto}&{select_query}"
+        
+        # Añadir límite si se especifica
+        if limite:
+            url += f"&limit={limite}"
+            
+        with spinner(f"Obteniendo cotizaciones del proyecto {id_proyecto}..."):
+            response = requests.get(url, headers=headers)
         response.raise_for_status()
-        result = response.json()
-        
-        # Verificar si tenemos resultados
-        if not result:
-            console.print(f"[yellow]No se encontraron cotizaciones para el proyecto ID {id_proyecto}[/yellow]")
-        
-        return result
+        return response.json()
     except requests.exceptions.HTTPError as e:
         console.print(f"[bold red]Error en la solicitud HTTP: {e}[/bold red]")
         return []

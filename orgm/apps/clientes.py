@@ -29,35 +29,38 @@ console = Console()
 class TipoFactura(str, Enum):
     NCFC = "NCFC"
     NCF = "NCF"
+    NCG = "NCG"
+    NCRG = "NCRG"
 
-# Cargar variables de entorno
-load_dotenv(override=True)
+# Variables globales que inicializaremos en cada función
+POSTGREST_URL = None
+headers = None
 
-# URL de PostgREST
-POSTGREST_URL = os.getenv("POSTGREST_URL")
-
-# Eliminar la lógica local de CF Access y headers
-# # Credenciales de Cloudflare Access
-# CF_ACCESS_CLIENT_ID = os.getenv("CF_ACCESS_CLIENT_ID")
-# CF_ACCESS_CLIENT_SECRET = os.getenv("CF_ACCESS_CLIENT_SECRET")
-
-if not POSTGREST_URL:
-    console.print(
-        "[bold red]Error: POSTGREST_URL no está definida en las variables de entorno.[/bold red]"
-    )
-    sys.exit(1)
-
-# Configurar cabeceras usando la función centralizada
-headers = get_headers_json()
-
-# Verificar si se obtuvieron las credenciales (opcional)
-if "CF-Access-Client-Id" not in headers:
-    console.print(
-        "[bold yellow]Advertencia: Credenciales de Cloudflare Access no encontradas o no configuradas.[/bold yellow]"
-    )
-    console.print(
-        "[bold yellow]Las consultas a PostgREST no incluirán autenticación de Cloudflare Access.[/bold yellow]"
-    )
+def initialize():
+    """Inicializa las variables que anteriormente estaban a nivel de módulo"""
+    global POSTGREST_URL, headers
+    
+    # Cargar variables de entorno
+    load_dotenv(override=True)
+    
+    # Obtener URL de PostgREST
+    POSTGREST_URL = os.getenv("POSTGREST_URL")
+    if not POSTGREST_URL:
+        console.print(
+            "[bold yellow]Advertencia: POSTGREST_URL no está definida en las variables de entorno.[/bold yellow]"
+        )
+    
+    # Obtener headers usando la función centralizada
+    headers = get_headers_json()
+    
+    # Verificar si se obtuvieron las credenciales (opcional)
+    if "CF-Access-Client-Id" not in headers:
+        console.print(
+            "[bold yellow]Advertencia: Credenciales de Cloudflare Access no encontradas o no configuradas.[/bold yellow]"
+        )
+        console.print(
+            "[bold yellow]Las consultas a PostgREST no incluirán autenticación de Cloudflare Access.[/bold yellow]"
+        )
 
 def mostrar_tabla_clientes(clientes: List) -> None:
     """
@@ -359,6 +362,15 @@ def eliminar_cliente(id: int) -> bool:
     Returns:
         bool: True si la eliminación fue exitosa, False en caso contrario.
     """
+    # Asegurar que las variables estén inicializadas
+    if POSTGREST_URL is None:
+        initialize()
+        if not POSTGREST_URL:
+            console.print(
+                "[bold red]No se puede continuar sin la URL de PostgREST[/bold red]"
+            )
+            return False
+            
     url = f"{POSTGREST_URL}/clientes?id=eq.{id}"
     try:
         response = requests.delete(url, headers=headers)

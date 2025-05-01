@@ -4,7 +4,7 @@ from datetime import datetime
 import typer
 from orgm.apis.pago import registrar_pago, obtener_pagos, asignar_pago_a_cotizacion
 from orgm.adm.clientes import obtener_clientes, obtener_cliente, buscar_clientes
-from orgm.adm.cotizaciones import obtener_cotizaciones_por_cliente, obtener_cotizacion
+from orgm.adm.cotizaciones import cotizaciones_por_cliente, obtener_cotizacion
 from orgm.stuff.spinner import spinner
 
 console = Console()
@@ -109,9 +109,10 @@ def seleccionar_cliente():
     # Crear lista de opciones para selección
     opciones = []
     for cliente in clientes:
-        nombre = cliente.get("nombre", "Sin nombre")
-        id_cliente = cliente.get("id", "N/A")
-        ruc = cliente.get("numero", "Sin RUC/RNC")
+        # Usar getattr en lugar de get para acceder a los atributos de los objetos Cliente
+        nombre = getattr(cliente, "nombre", "Sin nombre")
+        id_cliente = getattr(cliente, "id", "N/A")
+        ruc = getattr(cliente, "numero", "Sin RUC/RNC")
         opciones.append({
             "name": f"ID: {id_cliente} - {nombre} ({ruc})",
             "value": id_cliente
@@ -148,7 +149,8 @@ def registrar_pago_interactivo():
     with spinner(f"Cargando datos del cliente {id_cliente}..."):
         cliente = obtener_cliente(id_cliente)
     
-    console.print(f"Cliente seleccionado: [bold]{cliente.get('nombre')}[/bold] (ID: {id_cliente})")
+    # Usar getattr en lugar de get
+    console.print(f"Cliente seleccionado: [bold]{getattr(cliente, 'nombre', 'Desconocido')}[/bold] (ID: {id_cliente})")
     
     # Solicitar datos del pago
     monto_str = questionary.text("Monto del pago:").ask()
@@ -171,7 +173,8 @@ def registrar_pago_interactivo():
     
     # Confirmar datos
     console.print("\n[bold]Datos del pago:[/bold]")
-    console.print(f"Cliente: {cliente.get('nombre')} (ID: {id_cliente})")
+    # Usar getattr en lugar de get
+    console.print(f"Cliente: {getattr(cliente, 'nombre', 'Desconocido')} (ID: {id_cliente})")
     console.print(f"Monto: {monto} {moneda}")
     console.print(f"Fecha: {fecha}")
     if comprobante:
@@ -187,6 +190,7 @@ def registrar_pago_interactivo():
         resultado = registrar_pago(id_cliente, moneda, monto, fecha, comprobante)
     
     if resultado:
+        # Aquí resultado es un diccionario, podemos usar get
         console.print(f"[bold green]✓ Pago registrado correctamente con ID {resultado.get('id')}[/bold green]")
         
         # Preguntar si desea asignar el pago a alguna cotización
@@ -194,7 +198,7 @@ def registrar_pago_interactivo():
         if asignar:
             # Obtener cotizaciones del cliente
             with spinner(f"Obteniendo cotizaciones del cliente {id_cliente}..."):
-                cotizaciones = obtener_cotizaciones_por_cliente(id_cliente)
+                cotizaciones = cotizaciones_por_cliente(id_cliente)
             
             if not cotizaciones:
                 console.print("[yellow]El cliente no tiene cotizaciones disponibles para asignar el pago.[/yellow]")
@@ -281,14 +285,23 @@ def listar_pagos_interactivo():
     tabla.add_column("Fecha")
     tabla.add_column("Comprobante")
     
-    # Obtener información de clientes
+    # Obtener información de clientes y crear un diccionario de id:nombre
+    clientes_dict = {}
     with spinner("Cargando información de clientes..."):
-        clientes = {c.get('id'): c.get('nombre') for c in obtener_clientes()}
+        clientes_lista = obtener_clientes()
+        for c in clientes_lista:
+            # Usar getattr en lugar de get ya que c es un objeto Cliente
+            clientes_dict[getattr(c, 'id', 0)] = getattr(c, 'nombre', f"Cliente {getattr(c, 'id', 'N/A')}")
     
     for pago in pagos:
+        # pago es un diccionario, podemos usar get
+        id_cliente_pago = pago.get("id_cliente")
+        # Buscar el nombre del cliente en nuestro diccionario
+        nombre_cliente = clientes_dict.get(id_cliente_pago, f"Cliente {id_cliente_pago}")
+        
         tabla.add_row(
             str(pago.get("id", "N/A")),
-            clientes.get(pago.get("id_cliente"), f"Cliente {pago.get('id_cliente')}"),
+            nombre_cliente,
             f"{pago.get('monto', 0):,.2f}",
             pago.get("moneda", "DOP"),
             pago.get("fecha", "N/A"),
@@ -296,111 +309,6 @@ def listar_pagos_interactivo():
         )
     
     console.print(tabla)
-    input("\nPresione Enter para continuar...")
-    return pago_menu()
-
-
-def asignar_pago_interactivo():
-    """Interfaz interactiva para asignar un pago a una cotización."""
-    console.print("[bold blue]===== Asignar Pago a Cotización =====[/bold blue]")
-    
-    # Obtener listado de pagos
-    with spinner("Obteniendo pagos disponibles..."):
-        pagos = obtener_pagos()
-    
-    if not pagos:
-        console.print("[yellow]No hay pagos disponibles para asignar.[/yellow]")
-        input("\nPresione Enter para continuar...")
-        return pago_menu()
-    
-    # Obtener información de clientes
-    with spinner("Cargando información de clientes..."):
-        clientes = {c.get('id'): c.get('nombre') for c in obtener_clientes()}
-    
-    # Crear lista de opciones para selección de pago
-    opciones_pago = []
-    for pago in pagos:
-        id_pago = pago.get("id", "N/A")
-        cliente_nombre = clientes.get(pago.get("id_cliente"), f"Cliente {pago.get('id_cliente')}")
-        monto = pago.get("monto", 0)
-        moneda = pago.get("moneda", "DOP")
-        fecha = pago.get("fecha", "N/A")
-        
-        opciones_pago.append({
-            "name": f"ID: {id_pago} - {cliente_nombre} - {monto} {moneda} ({fecha})",
-            "value": pago
-        })
-    
-    # Mostrar opciones para selección de pago
-    seleccion_pago = questionary.select(
-        "Seleccione el pago a asignar:",
-        choices=[opcion["name"] for opcion in opciones_pago] + ["Cancelar"],
-        use_indicator=True
-    ).ask()
-    
-    if seleccion_pago == "Cancelar":
-        console.print("[yellow]Operación cancelada[/yellow]")
-        return pago_menu()
-    
-    # Obtener el pago seleccionado
-    pago_seleccionado = next(opcion["value"] for opcion in opciones_pago if opcion["name"] == seleccion_pago)
-    
-    # Obtener el cliente del pago seleccionado
-    id_cliente_pago = pago_seleccionado.get("id_cliente")
-    
-    # Obtener cotizaciones del cliente
-    with spinner(f"Obteniendo cotizaciones del cliente {id_cliente_pago}..."):
-        cotizaciones = obtener_cotizaciones_por_cliente(id_cliente_pago)
-    
-    if not cotizaciones:
-        console.print(f"[yellow]El cliente no tiene cotizaciones disponibles para asignar el pago.[/yellow]")
-        input("\nPresione Enter para continuar...")
-        return pago_menu()
-    
-    # Preparar lista de opciones para cotizaciones
-    opciones_cotizacion = []
-    for cot in cotizaciones:
-        opciones_cotizacion.append({
-            "name": f"ID: {cot.get('id')} - {cot.get('descripcion', 'Sin descripción')[:30]}... - Total: {cot.get('total')} {cot.get('moneda', 'DOP')}",
-            "value": str(cot.get('id'))
-        })
-    
-    # Preguntar al usuario qué cotización
-    seleccion_cotizacion = questionary.select(
-        "Seleccione la cotización a la que desea asignar el pago:",
-        choices=[opcion["name"] for opcion in opciones_cotizacion] + ["Cancelar"]
-    ).ask()
-    
-    if seleccion_cotizacion == "Cancelar":
-        console.print("[yellow]Asignación cancelada[/yellow]")
-        input("\nPresione Enter para continuar...")
-        return pago_menu()
-    
-    # Obtener el ID de la cotización seleccionada
-    id_cotizacion = next(opcion["value"] for opcion in opciones_cotizacion if opcion["name"] == seleccion_cotizacion)
-    
-    # Preguntar monto a asignar (por defecto todo)
-    monto_disponible = pago_seleccionado.get("monto", 0)
-    monto_asignar_str = questionary.text(
-        f"Monto a asignar a la cotización ID {id_cotizacion}:", 
-        default=str(monto_disponible)
-    ).ask()
-    
-    try:
-        monto_asignar = float(monto_asignar_str)
-    except ValueError:
-        console.print("[bold red]El monto debe ser un número. Se utilizará el monto completo.[/bold red]")
-        monto_asignar = monto_disponible
-    
-    # Asignar el pago
-    with spinner("Asignando pago..."):
-        asignacion = asignar_pago_a_cotizacion(pago_seleccionado.get('id'), int(id_cotizacion), monto_asignar)
-    
-    if asignacion:
-        console.print(f"[bold green]✓ Pago asignado correctamente a la cotización ID {id_cotizacion}[/bold green]")
-    else:
-        console.print("[bold red]✗ Error al asignar el pago[/bold red]")
-    
     input("\nPresione Enter para continuar...")
     return pago_menu()
 
@@ -409,39 +317,204 @@ def buscar_pagos_interactivo():
     """Interfaz interactiva para buscar pagos por cliente."""
     console.print("[bold blue]===== Buscar Pagos por Cliente =====[/bold blue]")
     
-    # Seleccionar cliente
-    id_cliente = seleccionar_cliente()
-    if id_cliente is None:
-        console.print("[yellow]Búsqueda cancelada[/yellow]")
-        return pago_menu()
+    # Preguntar si desea filtrar por cliente
+    filtrar_cliente = questionary.confirm("¿Desea filtrar por cliente?").ask()
     
-    # Obtener pagos del cliente
-    with spinner(f"Buscando pagos para cliente ID {id_cliente}..."):
+    id_cliente = None
+    cliente = None
+    
+    if filtrar_cliente:
+        id_cliente = seleccionar_cliente()
+        if id_cliente is None:
+            console.print("[yellow]Búsqueda cancelada[/yellow]")
+            return pago_menu()
+        
+        # Obtener datos del cliente para mostrar
+        with spinner(f"Cargando datos del cliente {id_cliente}..."):
+            cliente = obtener_cliente(id_cliente)
+        
+        # Usar getattr en lugar de get
+        console.print(f"Cliente seleccionado: [bold]{getattr(cliente, 'nombre', 'Desconocido')}[/bold] (ID: {id_cliente})")
+    
+    # Obtener pagos
+    with spinner("Buscando pagos..."):
         pagos = obtener_pagos(id_cliente)
     
     if not pagos:
-        console.print("[yellow]No se encontraron pagos para este cliente.[/yellow]")
-        input("\nPresione Enter para continuar...")
+        mensaje = "No se encontraron pagos"
+        if id_cliente:
+            mensaje += f" para el cliente {getattr(cliente, 'nombre', 'ID: ' + str(id_cliente))}"
+        console.print(f"[yellow]{mensaje}[/yellow]")
         return pago_menu()
     
-    # Mostrar resultados
+    # Mostrar tabla de pagos
     from rich.table import Table
-    tabla = Table(title=f"Pagos del Cliente ID {id_cliente}", show_header=True, header_style="bold magenta")
-    tabla.add_column("ID", style="dim")
-    tabla.add_column("Monto", justify="right")
-    tabla.add_column("Moneda")
-    tabla.add_column("Fecha")
-    tabla.add_column("Comprobante")
+    
+    tabla = Table(title="Pagos encontrados")
+    tabla.add_column("ID", justify="right", style="cyan")
+    tabla.add_column("Cliente", style="green")
+    tabla.add_column("Monto", justify="right", style="yellow")
+    tabla.add_column("Moneda", style="magenta")
+    tabla.add_column("Fecha", style="blue")
+    tabla.add_column("Comprobante", style="dim")
+    tabla.add_column("Estado", style="bold")
     
     for pago in pagos:
+        # Aquí pago es un diccionario, usamos get
+        id_pago = pago.get("id", "N/A")
+        
+        # Si no tenemos nombre de cliente, lo buscamos
+        nombre_cliente = pago.get("nombre_cliente", "")
+        if not nombre_cliente and "id_cliente" in pago:
+            cliente_id = pago.get("id_cliente")
+            cliente_obj = obtener_cliente(cliente_id)
+            if cliente_obj:
+                nombre_cliente = getattr(cliente_obj, "nombre", f"ID: {cliente_id}")
+        
+        monto = pago.get("monto", 0)
+        moneda = pago.get("moneda", "")
+        fecha = pago.get("fecha", "")
+        comprobante = pago.get("comprobante", "")
+        
+        # Verificar si está asignado a cotización
+        estado = "Sin asignar"
+        if pago.get("id_cotizacion"):
+            estado = f"Asignado a Cotización #{pago.get('id_cotizacion')}"
+        
         tabla.add_row(
-            str(pago.get("id", "N/A")),
-            f"{pago.get('monto', 0):,.2f}",
-            pago.get("moneda", "DOP"),
-            pago.get("fecha", "N/A"),
-            pago.get("comprobante", "")
+            str(id_pago),
+            nombre_cliente,
+            f"{monto:,.2f}",
+            moneda,
+            fecha,
+            comprobante,
+            estado
         )
     
     console.print(tabla)
-    input("\nPresione Enter para continuar...")
+    
+    # Preguntar si desea asignar algún pago
+    asignar = questionary.confirm("¿Desea asignar alguno de estos pagos a una cotización?").ask()
+    if asignar:
+        return asignar_pago_interactivo()
+    
+    return pago_menu()
+
+
+def asignar_pago_interactivo():
+    """Interfaz interactiva para asignar un pago a una cotización."""
+    console.print("[bold blue]===== Asignar Pago a Cotización =====[/bold blue]")
+    
+    # Primero seleccionar un cliente
+    id_cliente = seleccionar_cliente()
+    if id_cliente is None:
+        console.print("[yellow]Operación cancelada[/yellow]")
+        return pago_menu()
+    
+    # Obtener datos del cliente para mostrar
+    with spinner(f"Cargando datos del cliente {id_cliente}..."):
+        cliente = obtener_cliente(id_cliente)
+    
+    # Usar getattr en lugar de get
+    console.print(f"Cliente seleccionado: [bold]{getattr(cliente, 'nombre', 'Desconocido')}[/bold] (ID: {id_cliente})")
+    
+    # Obtener pagos sin asignar del cliente
+    with spinner(f"Obteniendo pagos sin asignar del cliente {id_cliente}..."):
+        pagos = obtener_pagos(id_cliente, solo_sin_asignar=True)
+    
+    if not pagos:
+        console.print("[yellow]El cliente no tiene pagos disponibles para asignar.[/yellow]")
+        return pago_menu()
+    
+    # Crear opciones para seleccionar el pago
+    opciones_pago = []
+    for pago in pagos:
+        id_pago = pago.get("id", "N/A")
+        monto = pago.get("monto", 0)
+        moneda = pago.get("moneda", "")
+        fecha = pago.get("fecha", "")
+        comprobante = pago.get("comprobante", "") or "Sin comprobante"
+        
+        opciones_pago.append({
+            "name": f"ID: {id_pago} - {monto:,.2f} {moneda} - {fecha} - {comprobante}",
+            "value": id_pago
+        })
+    
+    opciones_pago.append({"name": "⬅️ Cancelar", "value": "cancelar"})
+    
+    # Seleccionar pago
+    seleccion_pago = questionary.select(
+        "Seleccione el pago a asignar:",
+        choices=[opcion["name"] for opcion in opciones_pago],
+        use_indicator=True
+    ).ask()
+    
+    if seleccion_pago is None or seleccion_pago == "⬅️ Cancelar":
+        console.print("[yellow]Operación cancelada[/yellow]")
+        return pago_menu()
+    
+    # Obtener el ID del pago seleccionado
+    id_pago = next(opcion["value"] for opcion in opciones_pago if opcion["name"] == seleccion_pago)
+    
+    # Obtener cotizaciones del cliente
+    with spinner(f"Obteniendo cotizaciones del cliente {id_cliente}..."):
+        cotizaciones = cotizaciones_por_cliente(id_cliente)
+    
+    if not cotizaciones:
+        console.print("[yellow]El cliente no tiene cotizaciones disponibles para asignar el pago.[/yellow]")
+        return pago_menu()
+    
+    # Crear opciones para seleccionar la cotización
+    opciones_cotizacion = []
+    for cotizacion in cotizaciones:
+        id_cotizacion = cotizacion.get("id", "N/A")
+        descripcion = cotizacion.get("descripcion", "Sin descripción")
+        monto = cotizacion.get("monto_total", 0)
+        moneda = cotizacion.get("moneda", "")
+        fecha = cotizacion.get("fecha", "")
+        
+        # Obtener el monto ya pagado
+        monto_pagado = sum(p.get("monto", 0) for p in obtener_pagos(id_cliente=id_cliente, id_cotizacion=id_cotizacion))
+        
+        opciones_cotizacion.append({
+            "name": f"ID: {id_cotizacion} - {descripcion} - {monto:,.2f} {moneda} - {fecha} - Pagado: {monto_pagado:,.2f} {moneda}",
+            "value": id_cotizacion
+        })
+    
+    opciones_cotizacion.append({"name": "⬅️ Cancelar", "value": "cancelar"})
+    
+    # Seleccionar cotización
+    seleccion_cotizacion = questionary.select(
+        "Seleccione la cotización a la que asignar el pago:",
+        choices=[opcion["name"] for opcion in opciones_cotizacion],
+        use_indicator=True
+    ).ask()
+    
+    if seleccion_cotizacion is None or seleccion_cotizacion == "⬅️ Cancelar":
+        console.print("[yellow]Operación cancelada[/yellow]")
+        return pago_menu()
+    
+    # Obtener el ID de la cotización seleccionada
+    id_cotizacion = next(opcion["value"] for opcion in opciones_cotizacion if opcion["name"] == seleccion_cotizacion)
+    
+    # Confirmar la asignación
+    console.print("\n[bold]Datos de la asignación:[/bold]")
+    console.print(f"Cliente: {getattr(cliente, 'nombre', 'Desconocido')} (ID: {id_cliente})")
+    console.print(f"Pago ID: {id_pago}")
+    console.print(f"Cotización ID: {id_cotizacion}")
+    
+    confirmar = questionary.confirm("¿Confirma la asignación del pago a esta cotización?").ask()
+    if not confirmar:
+        console.print("[yellow]Operación cancelada[/yellow]")
+        return pago_menu()
+    
+    # Asignar el pago
+    with spinner("Asignando pago..."):
+        resultado = asignar_pago_a_cotizacion(id_pago, id_cotizacion)
+    
+    if resultado:
+        console.print(f"[bold green]✓ Pago asignado correctamente a la cotización #{id_cotizacion}[/bold green]")
+    else:
+        console.print("[bold red]Error al asignar el pago[/bold red]")
+    
     return pago_menu() 

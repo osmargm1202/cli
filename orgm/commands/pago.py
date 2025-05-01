@@ -7,7 +7,7 @@ from rich.console import Console
 from rich.table import Table
 from orgm.apis.pago import registrar_pago, obtener_pagos, asignar_pago_a_cotizacion
 from orgm.adm.clientes import obtener_clientes, obtener_cliente
-from orgm.adm.cotizaciones import obtener_cotizaciones_por_cliente, obtener_cotizacion
+from orgm.adm.cotizaciones import cotizaciones_por_cliente, obtener_cotizacion
 from orgm.stuff.spinner import spinner
 
 console = Console()
@@ -54,7 +54,7 @@ def pago_registrar_command(
     if asignar:
         # Obtener cotizaciones del cliente
         with spinner(f"Obteniendo cotizaciones del cliente {id_cliente}..."):
-            cotizaciones = obtener_cotizaciones_por_cliente(id_cliente)
+            cotizaciones = cotizaciones_por_cliente(id_cliente)
         
         if not cotizaciones:
             console.print("[yellow]El cliente no tiene cotizaciones disponibles para asignar el pago.[/yellow]")
