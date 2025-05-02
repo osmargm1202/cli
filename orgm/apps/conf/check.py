@@ -3,7 +3,7 @@ import os
 import requests
 import typer
 from rich.console import Console
-from orgm.apis.header import get_headers_json  # Importar la función centralizada
+from orgm.stuff.header import get_headers_json  # Importar la función centralizada
 
 
 console = Console()

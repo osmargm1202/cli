@@ -11,12 +11,13 @@ def upload() -> None:
         ["uv", "pip", "install", "--upgrade", "pip"],
         ["uv", "pip", "install", "--upgrade", "build"],
         ["uv", "pip", "install", "--upgrade", "twine"],
-        ["uv", "run", "build"],
+        ["rm", "-rf", "dist/*"],
+        ["uv", "run", "-m", "build"],
         # El comando twine upload necesita manejar el globbing. 
         # Usamos shell=True con precaución o manejamos el globbing en Python.
-        # Por simplicidad aquí, y dado que el path es fijo, se usa shell=True.
+    # Por simplicidad aquí, y dado que el path es fijo, se usa shell=True.
         # Considerar alternativas más seguras si el path fuera dinámico.
-        "uv run twine upload dist/*" 
+        ["uv", "run", "twine", "upload", "dist/*"] 
     ]
 
     for cmd in commands:

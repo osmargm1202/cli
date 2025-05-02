@@ -1,3 +1,4 @@
+
 import os
 
 
@@ -16,9 +17,3 @@ def get_headers_json():
         headers["CF-Access-Client-Secret"] = CF_ACCESS_CLIENT_SECRET
 
     return headers
-
-
-if __name__ == "__main__":
-    from dotenv import load_dotenv
-    load_dotenv()
-    print(get_headers_json())

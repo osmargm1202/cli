@@ -3,7 +3,7 @@ import requests
 import json
 from pathlib import Path
 from rich.console import Console
-from orgm.apis.header import get_headers_json
+from orgm.stuff.header import get_headers_json
 import questionary
 console = Console()
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from typing import Dict, List, Optional
 from rich.console import Console
-from orgm.adm.db import Proyecto, Ubicacion  # Importación a nivel de módulo para que otros módulos puedan acceder
+from orgm.apps.adm.db import Proyecto, Ubicacion  # Importación a nivel de módulo para que otros módulos puedan acceder
 from orgm.apps.ai.generate import generate_text
 
 console = Console()
@@ -73,7 +73,7 @@ def obtener_proyectos() -> List[Proyecto]:
         initialize()
     
     import requests
-    from orgm.adm.db import Proyecto
+    from orgm.apps.adm.db import Proyecto
     
     try:
         response = requests.get(f"{POSTGREST_URL}/proyecto", headers=headers, timeout=10)
@@ -94,7 +94,7 @@ def obtener_proyecto(id_proyecto: int) -> Optional[Proyecto]:
         initialize()
     
     import requests
-    from orgm.adm.db import Proyecto
+    from orgm.apps.adm.db import Proyecto
     
     try:
         response = requests.get(
@@ -125,7 +125,7 @@ def crear_proyecto(proyecto_data: Dict) -> Optional[Proyecto]:
         initialize()
     
     import requests
-    from orgm.adm.db import Proyecto
+    from orgm.apps.adm.db import Proyecto
     from orgm.apis.ai import generate_project_description
     
     try:
@@ -171,7 +171,7 @@ def actualizar_proyecto(id_proyecto: int, proyecto_data: Dict) -> Optional[Proye
         initialize()
     
     import requests
-    from orgm.adm.db import Proyecto
+    from orgm.apps.adm.db import Proyecto
     from orgm.apis.ai import generate_project_description
     
     try:
@@ -252,7 +252,7 @@ def buscar_proyectos(termino: str) -> List[Proyecto]:
         initialize()
     
     import requests
-    from orgm.adm.db import Proyecto
+    from orgm.apps.adm.db import Proyecto
     
     try:
         # Usamos el operador ILIKE de PostgreSQL para búsqueda case-insensitive
@@ -278,7 +278,7 @@ def obtener_ubicaciones() -> List[Ubicacion]:
         initialize()
     
     import requests
-    from orgm.adm.db import Ubicacion
+    from orgm.apps.adm.db import Ubicacion
     
     try:
         response = requests.get(f"{POSTGREST_URL}/ubicacion", headers=headers, timeout=10)
@@ -299,7 +299,7 @@ def buscar_ubicaciones(termino: str) -> List[Ubicacion]:
         initialize()
     
     import requests
-    from orgm.adm.db import Ubicacion
+    from orgm.apps.adm.db import Ubicacion
     
     try:
         response = requests.get(

@@ -1,15 +1,15 @@
 [project]
 name = "orgm"
-version = "0.11"
+version = "0.123"
 description = "ORGM CLI for managing projects and tasks"
 readme = "README.md"
 authors = [{name = "Osmar Garcia"}]
-license = {text = "Apache-2.0"}
+license = "Apache-2.0"
 requires-python = ">=3.8"
 classifiers = [
-    "License :: OSI Approved :: Apache Software License"
 ]
 dependencies = [
+    "asciimatics>=1.15.0",
     "kivy>=2.3.1",
     "nicegui>=2.15.0",
     "pyperclip>=1.9.0",

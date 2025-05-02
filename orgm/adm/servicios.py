@@ -3,7 +3,7 @@
 
 from typing import Dict, List, Optional
 from rich.console import Console
-from orgm.adm.db import Servicios  # Importación a nivel de módulo para que otros módulos puedan acceder
+from orgm.apps.adm.db import Servicios  # Importación a nivel de módulo para que otros módulos puedan acceder
 
 console = Console()
 

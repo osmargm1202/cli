@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 import questionary
+from questionary import Style
 from rich.console import Console
+from orgm.qstyle import custom_style_fancy
 
 console = Console()
 
@@ -49,6 +51,7 @@ def menu_principal():
         {"name": "💱 Desarrollo", "value": "dev"}, # Comando directo
         {"name": "🔄 Utilidades", "value": "util"}, # Comando directo
         {"name": "🔄 Apis", "value": "api"}, # Comando directo
+        {"name": "🔄 Buscar empresa por RNC o Nombre", "value": "rnc"}, # Comando directo
         {"name": "🔄 Volver al menú principal", "value": "main-menu"},
     ]
 
@@ -59,7 +62,8 @@ def menu_principal():
             "Seleccione una categoría:",
             choices=[opcion["name"] for opcion in main_opciones],
             use_indicator=True,
-            use_shortcuts=True
+            use_shortcuts=True,
+        style=custom_style_fancy,
         ).ask()
         
         if seleccion_categoria is None: return "exit" # Ctrl+C

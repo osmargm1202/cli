@@ -14,7 +14,6 @@ def menu():
         {"name": "🔍 Verificar URLs", "value": "check"},
         {"name": "🔍 Cargar variables de entorno", "value": "env-file"},
         {"name": "📋 Editar variables de entorno", "value": "env-edit"},
-        {"name": "📤 Subir Herramienta a Pypi (Dev)", "value": "upload"},
         {"name": "🔍 Ayuda General", "value": "ayuda"},
         {"name": "📝 Ayuda", "value": "conf -h"},
         {"name": "❌ Salir", "value": "exit"}
@@ -29,13 +28,22 @@ def menu():
         
         if seleccion is None:  # Usuario presionó Ctrl+C
             return "exit"
-        elif comando == "ai -h":
-            subprocess.run(["orgm", "conf", "-h"])
-            return menu()
-        # Obtener el valor asociado a la selección
-        comando = next(opcion["value"] for opcion in opciones if opcion["name"] == seleccion)
+
+        # Obtener el valor asociado a la selección ANTES de usarlo
+        comando = next((opcion["value"] for opcion in opciones if opcion["name"] == seleccion), None)
         
         if comando == "exit":
+            console.print("[yellow]Saliendo...[/yellow]")
+            sys.exit(0)
+
+        if comando is None: # No debería ocurrir si questionary devuelve una selección válida
+             console.print(f"[bold red]Error interno: Selección inválida '{seleccion}'[/bold red]")
+             return "error"
+        elif comando == "conf -h":
+            # Ejecutar el comando de ayuda directamente
+            subprocess.run(["orgm", "conf", "--help"])
+            return menu() # Volver al menú después de mostrar la ayuda
+        elif comando == "exit":
             console.print("[yellow]Saliendo...[/yellow]")
             sys.exit(0)
         elif comando == "check":
@@ -58,11 +66,6 @@ def menu():
         elif comando == "env-edit":
             from orgm.apps.conf.env_edit import env_edit
             env_edit()
-            return menu()
-        elif comando == "upload":
-            # Crear configuración
-            from orgm.apps.dev.upload import upload
-            upload()
             return menu()
         elif comando == "ayuda":
             # Editar configuración

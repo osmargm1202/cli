@@ -4,7 +4,7 @@
 
 from typing import Dict, List, Optional, Union
 from rich.console import Console
-from orgm.adm.db import Cotizacion  # Importación a nivel de módulo para que otros módulos puedan acceder
+from orgm.apps.adm.db import Cotizacion  # Importación a nivel de módulo para que otros módulos puedan acceder
 
 console = Console()
 

@@ -14,7 +14,7 @@ from orgm.adm.proyectos import (
     obtener_ubicaciones,
     buscar_ubicaciones,
 )
-from orgm.adm.db import Proyecto
+from orgm.apps.adm.db import Proyecto
 from orgm.stuff.spinner import spinner
 
 console = Console()

@@ -6,12 +6,16 @@ import typer
 from pathlib import Path
 from dotenv import load_dotenv
 from rich.console import Console
+from rich.prompt import Prompt
 from typing import Callable
-
+import questionary
+from pyfiglet import Figlet  # Importar Figlet
 from orgm.apps.conf.app import app as conf_app
 from orgm.apps.ai.app import app as ai_app
 from orgm.apps.dev.app import app as dev_app
 from orgm.apps.docker.app import app as docker_app
+from orgm.apps.utils.rnc.app import app as rnc_app
+from orgm.apps.adm.cliente.app import app as cliente_app
 from orgm.menu import menu_principal
 
 console = Console()
@@ -31,6 +35,8 @@ class OrgmCLI:
         self.app.add_typer(ai_app, name="ai")
         self.app.add_typer(dev_app, name="dev")
         self.app.add_typer(docker_app, name="docker")
+        self.app.add_typer(rnc_app, name="rnc")
+        self.app.add_typer(cliente_app, name="client")
 
         self.configurar_callback()
         self.cargar_variables_entorno()
@@ -107,14 +113,27 @@ class OrgmCLI:
             load_dotenv(override=True)
             if not Path(".env").exists():
                 # No .env found, run env edit command
-                console.print("[yellow]No se encontró archivo .env. Ejecutando 'orgm env edit'...[/yellow]")
+                console.print("[yellow]No se encontró archivo .env. Ejecutando 'orgm conf env-edit' o en su defecto 'orgm env-file [DIRECTORIO]'...[/yellow]")
                 args_originales = sys.argv.copy()
-                sys.argv = [sys.argv[0], "env", "edit"] 
-                self.app()
+                try:
+                    argumentos = questionary.text("Ingrese el comando para ejecutar: ", default="conf env-edit").ask()
+                    if argumentos == "":
+                        argumentos = "conf help"
+                    sys.argv = [sys.argv[0]] + argumentos.split() 
+                    self.app()
+                except Exception as e:
+                    console.print(f"[bold red]Error al ejecutar comando {argumentos}: {e}[/bold red]")
                 sys.argv = args_originales
 
 # Inicializar y ejecutar la CLI 
 def main():
+    # --- Mostrar título con pyfiglet ---
+    f = Figlet(font='ghost') # Puedes probar otras fuentes como 'standard', 'big', 'digital'
+    ascii_art = f.renderText('ORGM')
+    console.print(f"[bold blue]{ascii_art}[/bold blue]", justify="center")
+    console.print() # Añadir una línea en blanco después del título
+    # ---------------------------------
+
     # Crear instancia de la CLI
     cli = OrgmCLI()
     # Ejecutar la aplicación Typer y manejar interrupciones de usuario

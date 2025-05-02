@@ -11,7 +11,7 @@ import os, requests
 from orgm.adm.clientes import buscar_clientes
 from orgm.adm.cotizaciones import cotizaciones_por_cliente as adm_cotizaciones_por_cliente
 from orgm.adm.proyectos import buscar_proyectos, Proyecto
-from orgm.adm.db import Cotizacion
+from orgm.apps.adm.db import Cotizacion
 from orgm.stuff.spinner import spinner
 from orgm.apis.header import get_headers_json
 from datetime import datetime

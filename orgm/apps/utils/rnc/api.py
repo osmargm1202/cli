@@ -1,8 +1,8 @@
 import requests
 import os
-from orgm.apis.header import get_headers_json
+from orgm.stuff.header import get_headers_json
 
-def buscar_rnc_cliente(busqueda: str, activo: bool = True):
+def buscar_empresa_en_dgii(busqueda: str, activo: bool = True):
     RNC_URL = os.getenv("RNC_URL")
     """Busca clientes por nombre o RNC en la API."""
     if not RNC_URL:
