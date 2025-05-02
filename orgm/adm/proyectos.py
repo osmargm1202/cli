@@ -2,6 +2,7 @@
 from typing import Dict, List, Optional
 from rich.console import Console
 from orgm.adm.db import Proyecto, Ubicacion  # Importación a nivel de módulo para que otros módulos puedan acceder
+from orgm.apps.ai.generate import generate_text
 
 console = Console()
 
@@ -137,8 +138,9 @@ def crear_proyecto(proyecto_data: Dict) -> Optional[Proyecto]:
 
         # Si la descripción está vacía, generarla automáticamente
         if not proyecto_data.get("descripcion"):
-            descripcion = generate_project_description(
-                proyecto_data.get("nombre_proyecto")
+            descripcion = generate_text(
+                proyecto_data.get("nombre_proyecto"),
+                "descripcion_electromecanica"
             )
             if descripcion:
                 proyecto_data["descripcion"] = descripcion

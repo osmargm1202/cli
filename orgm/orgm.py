@@ -6,36 +6,15 @@ import typer
 from pathlib import Path
 from dotenv import load_dotenv
 from rich.console import Console
-from typing import List, Optional
+from typing import Callable
 
-# Importar los grupos de comandos de las aplicaciones
-from orgm.apps.clientes import clientes as clientes_app
-from orgm.apps.proyectos import proyecto as proyecto_app
-from orgm.apps.cotizaciones import cotizacion as cotizacion_app
-from orgm.apps.docker import docker as docker_app
-from orgm.apps.rnc_app import rnc_app
+from orgm.apps.conf.app import app as conf_app
+from orgm.apps.ai.app import app as ai_app
+from orgm.apps.dev.app import app as dev_app
+from orgm.apps.docker.app import app as docker_app
+from orgm.menu import menu_principal
 
-# Importar los typer apps para los módulos
-from orgm.apps.env_app import env_app, env_menu
-from orgm.apps.pdf_app import pdf_app, pdf_menu
-from orgm.apps.ai_app import ai_app, ai_menu
-from orgm.apps.pago_app import pago_app, pago_menu
-
-# Importar comandos básicos
-from orgm.commands.base import base_app
-# Importar comandos de API
-from orgm.commands.api_commands import api_app
-
-# Importar el menú principal
-from orgm.commands.menu import menu_principal
-
-# Crear consola para salida con Rich
 console = Console()
-
-# Clase personalizada para manejar la salida de los comandos
-class SalirException(Exception):
-    """Excepción personalizada para salir del programa."""
-    pass
 
 # Clase principal que maneja la aplicación CLI
 class OrgmCLI:
@@ -46,23 +25,14 @@ class OrgmCLI:
             no_args_is_help=False, # Evita la ayuda predeterminada de Typer sin argumentos
             add_completion=True # Opcional: deshabilitar la autocompletación si no se usa
         )
-        
         # Añadir todos los módulos usando add_typer
-        self.app.add_typer(env_app, name="env")
-        self.app.add_typer(pdf_app, name="pdf")
+
+        self.app.add_typer(conf_app, name="conf")
         self.app.add_typer(ai_app, name="ai")
-        self.app.add_typer(pago_app, name="payment")
-        self.app.add_typer(clientes_app, name="client")
-        self.app.add_typer(proyecto_app, name="project")
-        self.app.add_typer(cotizacion_app, name="quotation")
+        self.app.add_typer(dev_app, name="dev")
         self.app.add_typer(docker_app, name="docker")
-        self.app.add_typer(base_app, name="base")
-        self.app.add_typer(api_app, name="api")
-        
-        # Configurar el callback principal
+
         self.configurar_callback()
-        
-        # Cargar variables de entorno
         self.cargar_variables_entorno()
 
     def configurar_callback(self) -> None:
@@ -75,55 +45,53 @@ class OrgmCLI:
             if ctx.invoked_subcommand is None:
                 while True:
                     # Mostrar el menú interactivo
-                    resultado = menu_principal()
-                    if resultado is None or resultado == "exit" or resultado == "error":
+                    resultado = menu_principal() # Puede devolver función, str o "exit"
+
+                    if resultado == "exit":
                         break
+                    elif resultado is None or resultado == "error":
+                        break # Salir en caso de error o Ctrl+C en el menú
+
+                    elif callable(resultado):
+                        # Si es una función de menú, ejecutar el submenú
+                        self.ejecutar_submenu(resultado)
+                        continue # Volver al menú principal después del submenú
+
+                    elif isinstance(resultado, str):
+                        # Si es una cadena, ejecutar como comando
+                        try:
+                            comando_args = resultado.split()
+                            args_originales = sys.argv.copy()
+                            sys.argv = [sys.argv[0]] + comando_args
+                            self.app() # Ejecutar el comando Typer
+                            sys.argv = args_originales
+                        except Exception as e:
+                            console.print(f"[bold red]Error al ejecutar el comando '{resultado}': {e}[/bold red]")
+                            input("\nPresione Enter para continuar...")
+                        continue # Volver al menú principal después del comando
                     
-                    # Manejar submenús especiales
-                    if resultado == "env":
-                        self.ejecutar_submenu(env_menu)
-                        continue
-                    elif resultado == "pdf":
-                        self.ejecutar_submenu(pdf_menu)
-                        continue
-                    elif resultado == "ai":
-                        self.ejecutar_submenu(ai_menu)
-                        continue
-                    elif resultado == "payment":
-                        self.ejecutar_submenu(pago_menu)
-                        continue
-                    
-                    # Ejecutar el comando seleccionado en el menú
-                    try:
-                        # Dividir el comando en argumentos si contiene espacios
-                        comando_args = resultado.split()
-                        # Guardamos los argumentos originales
-                        args_originales = sys.argv.copy()
-                        # Configuramos los nuevos argumentos
-                        sys.argv = [sys.argv[0]] + comando_args
-                        # Ejecutamos el comando
-                        self.app()
-                        # Restauramos los argumentos originales
-                        sys.argv = args_originales
-                    except Exception as e:
-                        console.print(f"[bold red]Error al ejecutar el comando '{resultado}': {e}[/bold red]")
-                        # Pausa para que el usuario pueda leer el error
-                        input("\nPresione Enter para continuar...")
-    
-    def ejecutar_submenu(self, submenu_func):
-        """Ejecuta un submenú y maneja su resultado para la navegación."""
+                    else:
+                        # Caso inesperado
+                        console.print(f"[bold red]Error inesperado: Tipo de resultado desconocido del menú: {type(resultado)}[/bold red]")
+                        break
+
+    def ejecutar_submenu(self, submenu_func: Callable):
+        """Ejecuta un submenú (función) y maneja su resultado para la navegación."""
         try:
-            resultado_submenu = submenu_func()
-            if resultado_submenu is not None and resultado_submenu != "exit" and resultado_submenu != "error":
-                # Si el submenú devuelve un comando, ejecutarlo
+            resultado_submenu = submenu_func() # Ejecutar la función de menú (e.g., pdf_menu())
+            
+            # Si el submenú devuelve un comando (string), ejecutarlo
+            if isinstance(resultado_submenu, str) and resultado_submenu not in ["exit", "error"]:
                 comando_args = resultado_submenu.split()
                 args_originales = sys.argv.copy()
                 sys.argv = [sys.argv[0]] + comando_args
-                self.app()
+                self.app() # Ejecutar el comando devuelto por el submenú
                 sys.argv = args_originales
+            # Si devuelve "exit" o "error", simplemente volvemos al bucle principal (o salimos si es "exit")
+            # Si devuelve None (por ejemplo, Ctrl+C dentro del submenú), también volvemos
+
         except Exception as e:
-            console.print(f"[bold red]Error en el submenú: {e}[/bold red]")
-            # Pausa para que el usuario pueda leer el error
+            console.print(f"[bold red]Error en el submenú {submenu_func.__name__}: {e}[/bold red]")
             input("\nPresione Enter para continuar...")
 
     def cargar_variables_entorno(self) -> None:

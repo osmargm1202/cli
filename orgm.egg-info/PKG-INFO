@@ -1,13 +1,14 @@
 Metadata-Version: 2.4
 Name: orgm
 Version: 0.11
-Summary: ORGM CLI
+Summary: ORGM CLI for managing projects and tasks
 Home-page: https://github.com/osmargm1202/cli.git
 Author: Osmar Garcia
 Author-email: osmargm1202@gmail.com
 License: Apache-2.0
+Project-URL: Homepage, https://github.com/osmargm1202/cli
 Classifier: License :: OSI Approved :: Apache Software License
-Requires-Python: >=3.6
+Requires-Python: >=3.8
 Description-Content-Type: text/markdown
 License-File: LICENSE
 Requires-Dist: kivy>=2.3.1
@@ -52,5 +53,14 @@ uv tool install "git+https://github.com/osmargm1202/cli.git"
 
 wget -qO- https://astral.sh/uv/install.sh | sh
 uv tool install "git+https://github.com/osmargm1202/cli.git"
+
+```
+
+```
+uv pip install --upgrade pip
+uv pip install --upgrade build
+uv pip install --upgrade twine
+uv run build
+uv run twine upload dist/*
 
 ```

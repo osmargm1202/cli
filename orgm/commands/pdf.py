@@ -5,7 +5,7 @@ import typer
 from rich.console import Console
 
 # Importaciones locales del proyecto
-from orgm.adm.firma import firmar_pdf, seleccionar_y_firmar_pdf
+from orgm.apps.utils.firma import firmar_pdf, seleccionar_y_firmar_pdf
 
 # Crear consola para salida con Rich
 console = Console()

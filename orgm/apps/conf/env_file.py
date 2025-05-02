@@ -1,20 +1,9 @@
-# -*- coding: utf-8 -*-
 from pathlib import Path
-import typer
 from rich.console import Console
 
-# Importaciones locales del proyecto
-from orgm.stuff.variables import edit_env_variables
-
-# Crear consola para salida con Rich
 console = Console()
 
-def env_edit() -> None:
-    """Editar variables de entorno en una interfaz TUI"""
-    console.print("Abriendo editor de variables de entorno...")
-    edit_env_variables()
-
-def env_file(archivo: str = typer.Argument(..., help="Ruta al archivo a cargar")) -> None:
+def env_file(archivo: str) -> None:
     """Leer un archivo y guardarlo como .env"""
     try:
         archivo_path = Path(archivo)
@@ -30,4 +19,4 @@ def env_file(archivo: str = typer.Argument(..., help="Ruta al archivo a cargar")
 
         console.print(f"[bold green]Archivo '{archivo}' guardado como .env[/bold green]")
     except Exception as e:
-        console.print(f"[bold red]Error al procesar el archivo: {e}[/bold red]") 
+        console.print(f"[bold red]Error al procesar el archivo: {e}[/bold red]")

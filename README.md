@@ -25,3 +25,11 @@ uv tool install "git+https://github.com/osmargm1202/cli.git"
 
 ```
 
+```
+uv pip install --upgrade pip
+uv pip install --upgrade build
+uv pip install --upgrade twine
+uv run build
+uv run twine upload dist/*
+
+```
