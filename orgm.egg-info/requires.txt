@@ -1,4 +1,6 @@
 asciimatics>=1.15.0
+click-repl>=0.3.0
+click-shell>=2.1
 kivy>=2.3.1
 nicegui>=2.15.0
 pyperclip>=1.9.0

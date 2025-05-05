@@ -87,13 +87,11 @@ class ClienteGUI:
         self.tarjeta_seleccionada_actual = None
         
         spinner = ui.spinner(color='blue')
-        # Permitir búsqueda por ID también
         try:
             cliente_id = int(termino)
             cliente = obtener_cliente(cliente_id)
             self.clientes_encontrados = [cliente] if cliente else []
         except ValueError:
-            # Si no es un ID, buscar por nombre
             self.clientes_encontrados = buscar_clientes(termino) or []
         finally:
             spinner.delete()
@@ -109,15 +107,17 @@ class ClienteGUI:
                 return
 
             for cliente in self.clientes_encontrados:
-                # Crear tarjeta clickeable para cada cliente
                 card_style = f'background-color: {FONDO_SECUNDARIO}; cursor: pointer; border: 1px solid gray;'
                 hover_style = f'background-color: {AZUL_PRIMARIO};'
                 
-                with ui.card().classes('w-full p-2 hover:shadow-lg') \
-                           .style(card_style) \
-                           .on('mouseover', lambda c=ui.card: c.style(hover_style)) \
-                           .on('mouseout', lambda c=ui.card: c.style(card_style)) \
-                           .on('click', partial(self.seleccionar_cliente_desde_tarjeta, cliente.id, ui.card)) as tarjeta:
+                # Crear tarjeta y asignar eventos usando la instancia 'tarjeta'
+                with ui.card().classes('w-full p-2 hover:shadow-lg') as tarjeta:
+                    tarjeta.style(card_style)
+                    # Usar la instancia 'tarjeta' en las lambdas
+                    tarjeta.on('mouseover', lambda t=tarjeta, hs=hover_style: t.style(hs))
+                    tarjeta.on('mouseout', lambda t=tarjeta, cs=card_style: t.style(cs))
+                    tarjeta.on('click', partial(self.seleccionar_cliente_desde_tarjeta, cliente.id, tarjeta))
+                    
                     with ui.row().classes('w-full justify-between items-center'):
                         with ui.column():
                             ui.label(f"{cliente.nombre}").classes('text-lg font-semibold').style(f'color: {TEXTO_PRINCIPAL}')
@@ -125,14 +125,12 @@ class ClienteGUI:
                         ui.label(f"Tel: {cliente.telefono or 'N/A'}").classes('text-sm').style(f'color: {TEXTO_PRINCIPAL}')
 
     async def seleccionar_cliente_desde_tarjeta(self, cliente_id: int, tarjeta_seleccionada):
-        # Resaltar visualmente la tarjeta (opcional, requiere más lógica si se deselecciona)
-        if self.tarjeta_seleccionada_actual:
-             # Restaurar estilo anterior (simplificado aquí)
-             self.tarjeta_seleccionada_actual.style(f'background-color: {FONDO_SECUNDARIO}; cursor: pointer; border: 1px solid gray;')
-        #tarjeta_seleccionada.style(f'background-color: {AZUL_PRIMARIO}; border: 2px solid white;')
-        #self.tarjeta_seleccionada_actual = tarjeta_seleccionada
+        # Opcional: Lógica para resaltar/desresaltar tarjetas
+        # if self.tarjeta_seleccionada_actual and self.tarjeta_seleccionada_actual != tarjeta_seleccionada:
+        #     self.tarjeta_seleccionada_actual.style(f'background-color: {FONDO_SECUNDARIO}; cursor: pointer; border: 1px solid gray;')
+        # tarjeta_seleccionada.style(f'background-color: {AZUL_PRIMARIO}; border: 2px solid white;')
+        # self.tarjeta_seleccionada_actual = tarjeta_seleccionada
         
-        # Cargar datos del cliente y actualizar UI
         await self.cargar_cliente(cliente_id)
 
     async def cargar_cliente(self, cliente_id: int):
@@ -144,7 +142,6 @@ class ClienteGUI:
             self.label_seleccionado.set_text(f'Cliente seleccionado: {self.cliente_seleccionado.nombre}')
             self.boton_editar.enable()
             ui.notify(f'Cliente "{self.cliente_seleccionado.nombre}" seleccionado', color='info')
-            # Opcional: Ocultar detalles si estaban visibles
             self.seccion_detalles.visible = False 
         else:
             ui.notify('No se pudo cargar el cliente', color='negative')
@@ -169,7 +166,7 @@ class ClienteGUI:
     def mostrar_form_nuevo_cliente(self):
         self.seccion_detalles.clear()
         self.seccion_detalles.visible = True
-        self.cliente_seleccionado = None # Asegurarse de deseleccionar
+        self.cliente_seleccionado = None 
         self.label_seleccionado.set_text('Creando nuevo cliente...')
         self.boton_editar.disable()
         
@@ -180,7 +177,6 @@ class ClienteGUI:
                 ui.button('Cancelar', on_click=lambda: self.seccion_detalles.set_visibility(False)).classes('bg-red-500')
                 ui.button('Crear Cliente', on_click=self.crear_nuevo_cliente).classes('bg-blue-600')
 
-    # Función helper para crear campos de formulario (evita duplicación)
     def _crear_campos_formulario(self, editar: bool):
         data = self.cliente_seleccionado if editar else None
         
@@ -221,15 +217,12 @@ class ClienteGUI:
         datos_actualizacion = {}
         for campo, elemento in self.campos_cliente.items():
             valor = elemento.value
-            # Asegurarse de que el valor no sea una cadena vacía si el campo no es obligatorio
-            # y convertir a None si corresponde para la API
-            # (Esto depende de cómo tu API maneje los strings vacíos vs None)
-            if isinstance(valor, str) and not valor.strip() and campo not in ['nombre', 'numero']: # Asumiendo nombre y numero son obligatorios
+            if isinstance(valor, str) and not valor.strip() and campo not in ['nombre', 'numero']:
                  datos_actualizacion[campo] = None
-            elif valor or valor == 0: # Permitir False, 0
+            elif valor or valor == 0: 
                  datos_actualizacion[campo] = valor
             else:
-                 datos_actualizacion[campo] = None # Para otros tipos vacíos
+                 datos_actualizacion[campo] = None 
 
         if not datos_actualizacion.get('nombre') or not datos_actualizacion.get('numero'):
             ui.notify('Nombre y Número/NIF son campos obligatorios', color='negative')
@@ -241,12 +234,9 @@ class ClienteGUI:
         
         if cliente_actualizado:
             ui.notify('Cliente actualizado correctamente', color='positive')
-            # Actualizar cliente seleccionado y refrescar lista si el cliente buscado estaba en ella
             self.cliente_seleccionado = cliente_actualizado 
-            # Podríamos optimizar buscando solo el término actual si es necesario
-            await self.buscar_clientes() # Recarga la búsqueda actual
+            await self.buscar_clientes() 
             self.seccion_detalles.visible = False
-            # Actualizar el label de selección
             self.label_seleccionado.set_text(f'Cliente seleccionado: {self.cliente_seleccionado.nombre}')
             self.boton_editar.enable()
         else:
@@ -273,9 +263,8 @@ class ClienteGUI:
         
         if nuevo_cliente:
             ui.notify(f'Cliente creado correctamente con ID: {nuevo_cliente.id}', color='positive')
-            # Limpiar búsqueda y mostrar el nuevo cliente
-            self.barra_busqueda.set_value(str(nuevo_cliente.id)) # Poner ID en búsqueda
-            await self.buscar_clientes() # Buscar por ID para mostrarlo
+            self.barra_busqueda.set_value(str(nuevo_cliente.id)) 
+            await self.buscar_clientes() 
             self.seccion_detalles.visible = False
         else:
             ui.notify('Error al crear el cliente', color='negative')

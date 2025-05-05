@@ -14,8 +14,6 @@ setup.py
 ./orgm/adm/pago.py
 ./orgm/adm/proyectos.py
 ./orgm/adm/servicios.py
-./orgm/apis/__init__.py
-./orgm/apis/clientes.py
 ./orgm/apps/__init__.py
 ./orgm/apps/adm/__init__.py
 ./orgm/apps/adm/db.py
@@ -33,6 +31,7 @@ setup.py
 ./orgm/apps/adm/cliente/mostrar_export.py
 ./orgm/apps/adm/cliente/new_client.py
 ./orgm/apps/adm/cliente/tipos.py
+./orgm/apps/adm/proyecto/__init__.py
 ./orgm/apps/ai/__init__.py
 ./orgm/apps/ai/app.py
 ./orgm/apps/ai/config_create.py
@@ -131,14 +130,6 @@ orgm/adm/__pycache__/firma.cpython-313.pyc
 orgm/adm/__pycache__/pago.cpython-313.pyc
 orgm/adm/__pycache__/proyectos.cpython-313.pyc
 orgm/adm/__pycache__/servicios.cpython-313.pyc
-orgm/apis/__init__.py
-orgm/apis/clientes.py
-orgm/apis/__pycache__/__init__.cpython-313.pyc
-orgm/apis/__pycache__/ai.cpython-313.pyc
-orgm/apis/__pycache__/divisa.cpython-313.pyc
-orgm/apis/__pycache__/header.cpython-313.pyc
-orgm/apis/__pycache__/pago.cpython-313.pyc
-orgm/apis/__pycache__/rnc.cpython-313.pyc
 orgm/apps/__init__.py
 orgm/apps/__pycache__/__init__.cpython-313.pyc
 orgm/apps/__pycache__/ai_app.cpython-313.pyc
@@ -177,11 +168,13 @@ orgm/apps/adm/cliente/__pycache__/find_clients.cpython-313.pyc
 orgm/apps/adm/cliente/__pycache__/form_client.cpython-313.pyc
 orgm/apps/adm/cliente/__pycache__/get_client.cpython-313.pyc
 orgm/apps/adm/cliente/__pycache__/get_clients.cpython-313.pyc
+orgm/apps/adm/cliente/__pycache__/gui.cpython-313.pyc
 orgm/apps/adm/cliente/__pycache__/max_id.cpython-313.pyc
 orgm/apps/adm/cliente/__pycache__/menu.cpython-313.pyc
 orgm/apps/adm/cliente/__pycache__/mostrar_export.cpython-313.pyc
 orgm/apps/adm/cliente/__pycache__/new_client.cpython-313.pyc
 orgm/apps/adm/cliente/__pycache__/tipos.cpython-313.pyc
+orgm/apps/adm/proyecto/__init__.py
 orgm/apps/ai/__init__.py
 orgm/apps/ai/app.py
 orgm/apps/ai/config_create.py
@@ -262,6 +255,7 @@ orgm/apps/utils/divisa.py
 orgm/apps/utils/find_company.py
 orgm/apps/utils/firma.py
 orgm/apps/utils/__pycache__/__init__.cpython-313.pyc
+orgm/apps/utils/__pycache__/divisa.cpython-313.pyc
 orgm/apps/utils/rnc/__init__.py
 orgm/apps/utils/rnc/api.py
 orgm/apps/utils/rnc/app.py

@@ -11,7 +11,7 @@ def upload() -> None:
         ["uv", "pip", "install", "--upgrade", "pip"],
         ["uv", "pip", "install", "--upgrade", "build"],
         ["uv", "pip", "install", "--upgrade", "twine"],
-        ["rm", "-rf", "dist/*"],
+        # ["rm", "-rf", "dist/*"],
         ["uv", "run", "-m", "build"],
         # El comando twine upload necesita manejar el globbing. 
         # Usamos shell=True con precaución o manejamos el globbing en Python.

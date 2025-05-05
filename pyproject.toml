@@ -1,6 +1,6 @@
 [project]
 name = "orgm"
-version = "0.123"
+version = "0.125"
 description = "ORGM CLI for managing projects and tasks"
 readme = "README.md"
 authors = [{name = "Osmar Garcia"}]
@@ -10,6 +10,8 @@ classifiers = [
 ]
 dependencies = [
     "asciimatics>=1.15.0",
+    "click-repl>=0.3.0",
+    "click-shell>=2.1",
     "kivy>=2.3.1",
     "nicegui>=2.15.0",
     "pyperclip>=1.9.0",

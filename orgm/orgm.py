@@ -10,13 +10,15 @@ from rich.prompt import Prompt
 from typing import Callable
 import questionary
 from pyfiglet import Figlet  # Importar Figlet
+from click_repl import register_repl
+from click_repl import repl as start_repl
 from orgm.apps.conf.app import app as conf_app
 from orgm.apps.ai.app import app as ai_app
 from orgm.apps.dev.app import app as dev_app
 from orgm.apps.docker.app import app as docker_app
 from orgm.apps.utils.rnc.app import app as rnc_app
 from orgm.apps.adm.cliente.app import app as cliente_app
-from orgm.menu import menu_principal
+from orgm.apps.adm.proyecto.app import app as proyecto_app
 
 console = Console()
 
@@ -37,68 +39,64 @@ class OrgmCLI:
         self.app.add_typer(docker_app, name="docker")
         self.app.add_typer(rnc_app, name="rnc")
         self.app.add_typer(cliente_app, name="client")
+        self.app.add_typer(proyecto_app, name="project")
+
+
+        # --- Comandos explícitos para salir del REPL ---
+        @self.app.command(name="exit", help="Salir del shell REPL.")
+        def exit_command():
+            """Comando para salir del REPL."""
+            console.print("[bold yellow]Saliendo...[/bold yellow]")
+            sys.exit(0)
+
+        # @self.app.command(name="quit", help="Salir del shell REPL.")
+        # def quit_command():
+        #     """Comando alternativo para salir del REPL."""
+        #     exit_command() # Reutiliza la lógica de exit
+        # # ----------------------------------------------
+
+        # Registrar el REPL
+        register_repl(self.app)
 
         self.configurar_callback()
         self.cargar_variables_entorno()
 
     def configurar_callback(self) -> None:
-        """Configura el callback principal para mostrar el menú interactivo."""
+        """Configura el callback principal para iniciar el REPL si no hay subcomando."""
         @self.app.callback(invoke_without_command=True)
         def main_callback(ctx: typer.Context):
             """
-            Si no se invoca ningún subcomando, muestra el menú interactivo.
+            Si no se invoca ningún subcomando, inicia el shell REPL interactivo.
             """
             if ctx.invoked_subcommand is None:
-                while True:
-                    # Mostrar el menú interactivo
-                    resultado = menu_principal() # Puede devolver función, str o "exit"
-
-                    if resultado == "exit":
-                        break
-                    elif resultado is None or resultado == "error":
-                        break # Salir en caso de error o Ctrl+C en el menú
-
-                    elif callable(resultado):
-                        # Si es una función de menú, ejecutar el submenú
-                        self.ejecutar_submenu(resultado)
-                        continue # Volver al menú principal después del submenú
-
-                    elif isinstance(resultado, str):
-                        # Si es una cadena, ejecutar como comando
-                        try:
-                            comando_args = resultado.split()
-                            args_originales = sys.argv.copy()
-                            sys.argv = [sys.argv[0]] + comando_args
-                            self.app() # Ejecutar el comando Typer
-                            sys.argv = args_originales
-                        except Exception as e:
-                            console.print(f"[bold red]Error al ejecutar el comando '{resultado}': {e}[/bold red]")
-                            input("\nPresione Enter para continuar...")
-                        continue # Volver al menú principal después del comando
+                # Iniciar el REPL directamente
+                try:
+                    # Mostrar mensaje de inicio
+                    console.print("[bold blue]¡Bienvenido al shell interactivo de ORGM![/bold blue]")
+                    console.print("[dim]Use 'exit' o Ctrl+D para salir. 'conf help' para ver comandos disponibles.[/dim]")
                     
-                    else:
-                        # Caso inesperado
-                        console.print(f"[bold red]Error inesperado: Tipo de resultado desconocido del menú: {type(resultado)}[/bold red]")
-                        break
-
-    def ejecutar_submenu(self, submenu_func: Callable):
-        """Ejecuta un submenú (función) y maneja su resultado para la navegación."""
-        try:
-            resultado_submenu = submenu_func() # Ejecutar la función de menú (e.g., pdf_menu())
-            
-            # Si el submenú devuelve un comando (string), ejecutarlo
-            if isinstance(resultado_submenu, str) and resultado_submenu not in ["exit", "error"]:
-                comando_args = resultado_submenu.split()
-                args_originales = sys.argv.copy()
-                sys.argv = [sys.argv[0]] + comando_args
-                self.app() # Ejecutar el comando devuelto por el submenú
-                sys.argv = args_originales
-            # Si devuelve "exit" o "error", simplemente volvemos al bucle principal (o salimos si es "exit")
-            # Si devuelve None (por ejemplo, Ctrl+C dentro del submenú), también volvemos
-
-        except Exception as e:
-            console.print(f"[bold red]Error en el submenú {submenu_func.__name__}: {e}[/bold red]")
-            input("\nPresione Enter para continuar...")
+                    # Configurar el prompt personalizado y llamar al REPL
+                    start_repl(ctx, prompt_kwargs={
+                        "message": "orgm> ",
+                        "enable_history_search": True,
+                        "mouse_support": True,
+                        "enable_open_in_editor": True,
+                        
+                    })
+                    
+                    # Cuando el REPL termina (por 'exit' o EOF), salimos
+                    console.print("[bold blue]Saliendo de la Terminal ORGM...[/bold blue]")
+                    sys.exit(0)
+                except (EOFError, KeyboardInterrupt):
+                    # Manejar salida por Ctrl+C si ocurre antes de que el REPL lo capture
+                    console.print("\n[bold yellow]Saliendo del REPL...[/bold yellow]")
+                    sys.exit(0)
+                except Exception as e:
+                    console.print(f"[bold red]Error durante la sesión REPL: {e}[/bold red]")
+                    sys.exit(1)
+            # Si se invoca un subcomando (ej: orgm conf env-edit),
+            # Typer/Click lo manejará automáticamente después de que esta función retorne.
+            # No es necesario hacer nada más aquí para ese caso.
 
     def cargar_variables_entorno(self) -> None:
         """Cargar variables de entorno desde un archivo .env"""
@@ -138,8 +136,15 @@ def main():
     cli = OrgmCLI()
     # Ejecutar la aplicación Typer y manejar interrupciones de usuario
     try:
+        # La llamada a cli.app() ahora:
+        # 1. Si hay argumentos (ej. orgm conf), ejecuta el comando.
+        # 2. Si NO hay argumentos, main_callback es llamado, detecta
+        #    invoked_subcommand is None, y llama a start_repl(ctx).
         cli.app()
     except (KeyboardInterrupt, EOFError):
+        # Esta excepción podría ser capturada por el REPL o aquí si ocurre fuera.
+        # El manejo dentro del REPL es más específico.
+        # Mantenemos esto como un respaldo general si algo sale mal antes de entrar al REPL.
         console.print("[bold yellow]Saliendo...[/bold yellow]")
         sys.exit(0)
 

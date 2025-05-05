@@ -2,15 +2,23 @@ import asyncio
 from typing import Optional
 from pathlib import Path
 from rich.console import Console
+import platformdirs
 from orgm.stuff.editor import EnvEditor
 
 console = Console()
 
 def env_edit(env_file_path: Optional[str] = None) -> bool:
     """Abre el editor Textual para el archivo .env."""
-    target_path = env_file_path or str(Path.cwd() / ".env")
+    if env_file_path:
+        target_path = Path(env_file_path)
+    else:
+        # Obtener la ruta de configuración del usuario específica para la aplicación 'orgm'
+        config_dir = Path(platformdirs.user_config_dir("orgm", ensure_exists=True))
+        target_path = config_dir / ".env"
+
+    print(f"Editando archivo .env en: {target_path}")
     try:
-        app = EnvEditor(file_path=target_path)
+        app = EnvEditor(file_path=str(target_path))
         # Ejecutar la app Textual dentro de asyncio.run()
         # Usamos run_async() dentro de asyncio.run
         # Nota: app.run() síncrono usualmente maneja el bucle, pero run_async
