@@ -12,30 +12,29 @@ from typing import Optional
 console = Console()
 
 
-
 def buscar_ubicaciones(termino: str) -> List[Ubicacion]:
     """Busca ubicaciones por provincia, distrito o distrito municipal"""
     POSTGREST_URL, headers = initialize()
-    
+
     import requests
     from orgm.apps.adm.db import Ubicacion
-    
+
     try:
         response = requests.get(
             f"{POSTGREST_URL}/ubicacion?or=(provincia.ilike.*{termino}*,distrito.ilike.*{termino}*,distritomunicipal.ilike.*{termino}*)",
             headers=headers,
-            timeout=10
+            timeout=10,
         )
         response.raise_for_status()
 
         ubicaciones_data = response.json()
-        ubicaciones = [Ubicacion.model_validate(ubicacion) for ubicacion in ubicaciones_data]
+        ubicaciones = [
+            Ubicacion.model_validate(ubicacion) for ubicacion in ubicaciones_data
+        ]
         return ubicaciones
     except Exception as e:
         console.print(f"[bold red]Error al buscar ubicaciones: {e}[/bold red]")
         return []
-    
-
 
 
 def seleccionar_ubicacion() -> Optional[str]:

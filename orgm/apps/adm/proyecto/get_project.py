@@ -3,21 +3,19 @@ from orgm.apps.adm.db import Proyecto
 from orgm.stuff.initialize_postgrest import initialize
 from rich.console import Console
 from rich.table import Table
+
 console = Console()
-
-
-
 
 
 def obtener_proyecto(id_proyecto: int) -> Optional[Proyecto]:
     """Obtiene un proyecto por su ID"""
     # Asegurar que las variables estén inicializadas
-    
+
     POSTGREST_URL, headers = initialize()
-    
+
     import requests
     from orgm.apps.adm.db import Proyecto
-    
+
     try:
         response = requests.get(
             f"{POSTGREST_URL}/proyecto?id=eq.{id_proyecto}", headers=headers, timeout=10
@@ -38,7 +36,6 @@ def obtener_proyecto(id_proyecto: int) -> Optional[Proyecto]:
             f"[bold red]Error al obtener proyecto {id_proyecto}: {e}[/bold red]"
         )
         return None
-    
 
 
 def mostrar_proyecto_detalle(proyecto: Proyecto):
@@ -59,4 +56,3 @@ def obtener_y_mostrar_proyecto(id_proyecto: int):
     proyecto = obtener_proyecto(id_proyecto)
     if proyecto:
         mostrar_proyecto_detalle(proyecto)
-

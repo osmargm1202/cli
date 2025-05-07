@@ -6,9 +6,12 @@ import typer
 
 console = Console()
 
+
 def exportar(
     id: int,
-    clipboard: bool = typer.Option(False, "--clipboard", help="Copiar al portapapeles en lugar de mostrar")
+    clipboard: bool = typer.Option(
+        False, "--clipboard", help="Copiar al portapapeles en lugar de mostrar"
+    ),
 ):
     """Comando para exportar un cliente a JSON."""
     with spinner(f"Obteniendo datos del cliente {id} para exportar..."):
@@ -24,15 +27,24 @@ def exportar(
         if clipboard:
             try:
                 import pyperclip
+
                 pyperclip.copy(contenido)
-                console.print("[bold green]Cliente exportado a JSON y copiado al portapapeles.[/bold green]")
+                console.print(
+                    "[bold green]Cliente exportado a JSON y copiado al portapapeles.[/bold green]"
+                )
             except ImportError:
-                console.print("[bold yellow]La funcionalidad de portapapeles requiere la librería 'pyperclip'.[/bold yellow]")
-                console.print("[bold yellow]Instálala con: pip install pyperclip[/bold yellow]")
+                console.print(
+                    "[bold yellow]La funcionalidad de portapapeles requiere la librería 'pyperclip'.[/bold yellow]"
+                )
+                console.print(
+                    "[bold yellow]Instálala con: pip install pyperclip[/bold yellow]"
+                )
                 console.print("\nContenido JSON:")
                 console.print(contenido)
             except Exception as e:
-                console.print(f"[bold red]Error al copiar al portapapeles: {e}[/bold red]")
+                console.print(
+                    f"[bold red]Error al copiar al portapapeles: {e}[/bold red]"
+                )
                 console.print("\nContenido JSON:")
                 console.print(contenido)
         else:

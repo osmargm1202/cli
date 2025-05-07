@@ -1,7 +1,6 @@
 from typing import Dict
 import questionary
 from orgm.apps.adm.proyecto.find_location import seleccionar_ubicacion
-from orgm.stuff.spinner import spinner
 from rich.console import Console
 
 console = Console()
@@ -63,7 +62,7 @@ def formulario_proyecto(proyecto=None) -> Dict:
                 # Si seleccionar_ubicacion devuelve None (no encontró o canceló)
                 reintentar = questionary.confirm(
                     "No se seleccionó ubicación. ¿Desea intentar buscar de nuevo?",
-                    default=True
+                    default=True,
                 ).ask()
                 if not reintentar:
                     # Si el usuario no quiere reintentar, mantener la ubicación existente (si la hay) o dejarla vacía
@@ -71,7 +70,7 @@ def formulario_proyecto(proyecto=None) -> Dict:
                         data["ubicacion"] = defaults["ubicacion"]
                     # Si es nuevo y no reintenta, la ubicación quedará sin asignar (o podría pedirla manualmente)
                     # Por ahora, rompemos el bucle y se queda vacía o con el valor por defecto si no era nuevo
-                    break 
+                    break
                 # Si reintentar es True, el bucle continúa
 
     elif not es_nuevo:

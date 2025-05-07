@@ -1,4 +1,3 @@
-import questionary
 from rich.console import Console
 from rich.table import Table
 from orgm.apps.utils.rnc.api import buscar_empresa_en_dgii
@@ -23,7 +22,11 @@ def mostrar_busqueda(busqueda: str, activo: bool = True):
         return
 
     # Crear tabla para mostrar resultados
-    table = Table(title="Resultados de Búsqueda RNC", show_header=True, header_style="bold magenta")
+    table = Table(
+        title="Resultados de Búsqueda RNC",
+        show_header=True,
+        header_style="bold magenta",
+    )
     table.add_column("RNC/Cédula", style="dim", width=15)
     table.add_column("Nombre Comercial")
     table.add_column("Razón Social")
@@ -36,7 +39,7 @@ def mostrar_busqueda(busqueda: str, activo: bool = True):
             empresa.get("nombre", "N/A"),
             empresa.get("razon", "N/A"),
             empresa.get("descripcion", "N/A"),
-            empresa.get("estado", "N/A")
+            empresa.get("estado", "N/A"),
         )
 
     console.print(table)

@@ -5,6 +5,7 @@ from rich.console import Console
 
 console = Console()
 
+
 def push():
     """Envía la imagen Docker al registry configurado."""
     load_local_env()

@@ -6,7 +6,6 @@ from rich.console import Console
 console = Console()
 
 
-
 def tag():
     """Etiqueta la imagen con la etiqueta latest en el registry."""
     load_local_env()

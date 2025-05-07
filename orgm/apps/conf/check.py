@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 import os
 import requests
-import typer
 from rich.console import Console
 from orgm.stuff.header import get_headers_json  # Importar la función centralizada
 
@@ -31,6 +30,8 @@ def check_urls() -> None:
             if resp.status_code < 400:
                 console.print(f"[bold green]{name} OK[/bold green] → {url}")
             else:
-                console.print(f"[bold red]{name} ERROR {resp.status_code}[/bold red] → {url}")
+                console.print(
+                    f"[bold red]{name} ERROR {resp.status_code}[/bold red] → {url}"
+                )
         except Exception as e:
             console.print(f"[bold red]{name} inaccesible:[/bold red] {e} → {url}")

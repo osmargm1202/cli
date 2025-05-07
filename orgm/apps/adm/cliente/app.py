@@ -1,5 +1,4 @@
 import typer
-from typing import List
 from rich.console import Console
 
 # Importar la función que define los argumentos y la lógica
@@ -10,7 +9,8 @@ from orgm.apps.adm.cliente.new_client import crear
 from orgm.apps.adm.cliente.edit_client import actualizar
 from orgm.apps.adm.cliente.mostrar_export import exportar
 from orgm.apps.adm.cliente.gui import iniciar_gui as gui
-# Crear consola para salida con Rich    
+
+# Crear consola para salida con Rich
 console = Console()
 
 # Crear aplicación Typer para comandos de IA
@@ -25,6 +25,8 @@ app.command(name="create")(crear)
 app.command(name="edit")(actualizar)
 app.command(name="export")(exportar)
 app.command(name="gui")(gui)
+
+
 @app.callback(invoke_without_command=True)
 def ai_callback(ctx: typer.Context):
     """
@@ -33,7 +35,9 @@ def ai_callback(ctx: typer.Context):
     if ctx.invoked_subcommand is None:
         # Ejecutar el menú de IA
         from orgm.apps.adm.cliente.menu import menu
+
         menu()
+
 
 if __name__ == "__main__":
     app()

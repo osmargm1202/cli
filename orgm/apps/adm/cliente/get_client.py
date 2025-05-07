@@ -16,10 +16,10 @@ def obtener_cliente(id_cliente: int) -> Optional[Cliente]:
     """Obtiene un cliente por su ID"""
     # Asegurar que las variables estén inicializadas
     POSTGREST_URL, headers = initialize()
-    
+
     import requests
     from orgm.apps.adm.db import Cliente
-    
+
     try:
         response = requests.get(
             f"{POSTGREST_URL}/cliente?id=eq.{id_cliente}", headers=headers, timeout=10
@@ -55,7 +55,7 @@ def mostrar_detalle_cliente(cliente) -> None:
 
     # Crear tabla de detalles
     tabla = Table(
-        title=f"[bold blue]Detalles del Cliente: {getattr(cliente, 'nombre', '')}[/bold blue]", # Usar getattr
+        title=f"[bold blue]Detalles del Cliente: {getattr(cliente, 'nombre', '')}[/bold blue]",  # Usar getattr
         box=box.DOUBLE_EDGE,
         show_header=True,
         header_style="bold cyan",
@@ -82,33 +82,36 @@ def mostrar_detalle_cliente(cliente) -> None:
         ("Celular Representante", "celular_representante"),
         ("Correo Representante", "correo_representante"),
         ("Tipo de Factura", "tipo_factura"),
-        ("Última Actualización", "fecha_actualizacion")
+        ("Última Actualización", "fecha_actualizacion"),
     ]
 
     # Añadir filas con los datos
     for etiqueta, campo in campos:
-        valor = getattr(cliente, campo, "") # Usar getattr
+        valor = getattr(cliente, campo, "")  # Usar getattr
         if campo == "fecha_actualizacion" and valor:
             try:
-                 # Pydantic puede devolver datetime o str, manejar ambos
+                # Pydantic puede devolver datetime o str, manejar ambos
                 if isinstance(valor, str):
-                     fecha_obj = datetime.fromisoformat(valor.replace("Z", "+00:00"))
+                    fecha_obj = datetime.fromisoformat(valor.replace("Z", "+00:00"))
                 elif isinstance(valor, datetime):
-                     fecha_obj = valor
+                    fecha_obj = valor
                 else:
-                     fecha_obj = None
-                
+                    fecha_obj = None
+
                 if fecha_obj:
-                     valor = fecha_obj.strftime("%d/%m/%Y %H:%M:%S")
+                    valor = fecha_obj.strftime("%d/%m/%Y %H:%M:%S")
             except (ValueError, TypeError):
-                valor = str(valor) # Mostrar como string si falla el formato
+                valor = str(valor)  # Mostrar como string si falla el formato
         tabla.add_row(etiqueta, str(valor))
 
     # Mostrar tabla
     console.print(tabla)
 
 
-def mostrar(id: int, formato_json: bool = typer.Option(False, "--json", help="Mostrar en formato JSON")):
+def mostrar(
+    id: int,
+    formato_json: bool = typer.Option(False, "--json", help="Mostrar en formato JSON"),
+):
     """Comando para mostrar detalles de un cliente."""
     with spinner(f"Obteniendo detalles del cliente {id}..."):
         cliente_obj = obtener_cliente(id)

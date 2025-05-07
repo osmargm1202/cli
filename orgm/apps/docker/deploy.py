@@ -3,7 +3,9 @@ from orgm.apps.docker.local_env import load_local_env, require_vars
 from orgm.apps.docker.cmd import _docker_cmd
 from rich.console import Console
 import typer
+
 console = Console()
+
 
 def deploy():
     """Despliega la aplicación en el contexto 'prod' usando docker compose."""
@@ -24,9 +26,15 @@ def deploy():
         ctx_ip = os.getenv("DOCKER_HOST_IP")
         if ctx_user and ctx_ip:
             host_str = f"ssh://{ctx_user}@{ctx_ip}"
-            _docker_cmd(["docker", "context", "create", "prod", "--docker", f"host={host_str}"])
+            _docker_cmd(
+                ["docker", "context", "create", "prod", "--docker", f"host={host_str}"]
+            )
         else:
-            raise typer.Exit("No se pudo crear contexto 'prod'. Falta DOCKER_HOST_USER o DOCKER_HOST_IP")
+            raise typer.Exit(
+                "No se pudo crear contexto 'prod'. Falta DOCKER_HOST_USER o DOCKER_HOST_IP"
+            )
 
     _docker_cmd(["docker", "--context", "prod", "pull", image])
-    _docker_cmd(["docker", "--context", "prod", "compose", "up", "-d", "--remove-orphans"])
+    _docker_cmd(
+        ["docker", "--context", "prod", "compose", "up", "-d", "--remove-orphans"]
+    )

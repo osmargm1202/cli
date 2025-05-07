@@ -12,6 +12,7 @@ console = Console()
 # Imports like requests, get_headers_json, load_dotenv are now inside functions
 # or the __main__ block to avoid execution on import.
 
+
 def generate_text(text: str, config_name: str) -> Optional[str]:
     """Llama al endpoint de IA para generar un contenido basado en el parámetro *text* y la configuración *config_name*.
 
@@ -48,7 +49,7 @@ def generate_text(text: str, config_name: str) -> Optional[str]:
         response = requests.post(
             f"{API_URL}/ai", json=request_data, headers=headers, timeout=30
         )
-        response.raise_for_status() # Raise an exception for bad status codes
+        response.raise_for_status()  # Raise an exception for bad status codes
 
         data = response.json()
         if "error" in data:
@@ -58,7 +59,7 @@ def generate_text(text: str, config_name: str) -> Optional[str]:
             return None
 
         # Assuming the response field is 'response'
-        return data.get("response") # Use .get for safety
+        return data.get("response")  # Use .get for safety
 
     except requests.exceptions.RequestException as e:
         # Handle connection errors, timeouts, etc.
@@ -68,5 +69,7 @@ def generate_text(text: str, config_name: str) -> Optional[str]:
         return None
     except Exception as e:
         # Handle other potential errors (like JSON decoding)
-        console.print(f"[bold red]Error inesperado al procesar respuesta IA: {e}[/bold red]")
+        console.print(
+            f"[bold red]Error inesperado al procesar respuesta IA: {e}[/bold red]"
+        )
         return None

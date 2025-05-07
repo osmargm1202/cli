@@ -16,24 +16,25 @@ DATABASE_SEARCH_PATH = None
 DATABASE_URL = None
 engine = None
 
+
 def initialize_db():
     """Initialize database variables that were previously at module level"""
     global DATABASE_USER, DATABASE_PASSWORD, DATABASE_HOST, DATABASE_NAME
     global DATABASE_SEARCH_PATH, DATABASE_URL, engine
-    
+
     load_dotenv()
-    
+
     DATABASE_USER = os.getenv("DATABASE_USER")
     DATABASE_PASSWORD = os.getenv("DATABASE_PASSWORD")
     DATABASE_HOST = os.getenv("DATABASE_HOST")
     DATABASE_NAME = os.getenv("DATABASE_NAME")
     DATABASE_SEARCH_PATH = os.getenv("DATABASE_SEARCH_PATH")
-    DATABASE_URL = (
-        f"postgresql://{DATABASE_USER}:{DATABASE_PASSWORD}@{DATABASE_HOST}/{DATABASE_NAME}"
-    )
-    
+    DATABASE_URL = f"postgresql://{DATABASE_USER}:{DATABASE_PASSWORD}@{DATABASE_HOST}/{DATABASE_NAME}"
+
     # Create the engine if needed
-    if engine is None and all([DATABASE_USER, DATABASE_PASSWORD, DATABASE_HOST, DATABASE_NAME]):
+    if engine is None and all(
+        [DATABASE_USER, DATABASE_PASSWORD, DATABASE_HOST, DATABASE_NAME]
+    ):
         try:
             if DATABASE_SEARCH_PATH:
                 engine = create_engine(
@@ -399,11 +400,13 @@ def create_db_schema():
     """Create database schema if needed"""
     if engine is None:
         initialize_db()
-        
+
     if engine is None:
-        print("[bold red]No se pudo crear el esquema: motor de base de datos no inicializado[/bold red]")
+        print(
+            "[bold red]No se pudo crear el esquema: motor de base de datos no inicializado[/bold red]"
+        )
         return
-        
+
     try:
         if DATABASE_SEARCH_PATH:
             with engine.connect() as c:

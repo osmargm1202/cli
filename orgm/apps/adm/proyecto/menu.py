@@ -1,21 +1,21 @@
 from rich.console import Console
-from rich.prompt import Prompt
 import questionary
 import sys
-import subprocess
 from orgm.apps.adm.proyecto.get_projects import obtener_proyectos, mostrar_proyectos
-from orgm.apps.adm.proyecto.get_project import obtener_proyecto, mostrar_proyecto_detalle
+from orgm.apps.adm.proyecto.get_project import (
+    obtener_proyecto,
+    mostrar_proyecto_detalle,
+)
 from orgm.apps.adm.proyecto.form_project import formulario_proyecto
-from orgm.apps.adm.proyecto.find_location import buscar_ubicaciones
 from orgm.apps.adm.proyecto.find_project import buscar_proyectos
-from orgm.apps.adm.proyecto.locations import obtener_ubicaciones
 from orgm.apps.adm.proyecto.update_project import actualizar_proyecto
 from orgm.apps.adm.proyecto.create_project import crear_proyecto
 from orgm.apps.adm.proyecto.gui import iniciar_gui
-
+from orgm.qstyle import custom_style_fancy
 from orgm.stuff.spinner import spinner
 
 console = Console()
+
 
 def menu():
     """Menú principal para la gestión de proyectos"""
@@ -32,6 +32,7 @@ def menu():
                 "Iniciar GUI",
                 "Salir",
             ],
+            style=custom_style_fancy,
         ).ask()
 
         if accion == "Salir":
@@ -49,21 +50,31 @@ def menu():
                     proyectos = buscar_proyectos(termino)
                 mostrar_proyectos(proyectos)
                 if proyectos:
-                    opciones = [f"{p.id}: {p.nombre_proyecto}" for p in proyectos] + ["Cancelar"]
-                    sel = questionary.select("¿Qué proyecto desea ver?", choices=opciones).ask()
+                    opciones = [f"{p.id}: {p.nombre_proyecto}" for p in proyectos] + [
+                        "Cancelar"
+                    ]
+                    sel = questionary.select(
+                        "¿Qué proyecto desea ver?", choices=opciones
+                    ).ask()
                     if sel != "Cancelar":
-                        pid = int(sel.split(":" )[0])
+                        pid = int(sel.split(":")[0])
                         with spinner(f"Obteniendo detalles del proyecto {pid}..."):
                             proyecto_sel = obtener_proyecto(pid)
                         if proyecto_sel:
                             mostrar_proyecto_detalle(proyecto_sel)
-                            if questionary.confirm("¿Desea editar este proyecto?", default=False).ask():
+                            if questionary.confirm(
+                                "¿Desea editar este proyecto?", default=False
+                            ).ask():
                                 datos = formulario_proyecto(proyecto_sel)
                                 if datos:
                                     with spinner(f"Actualizando proyecto {pid}..."):
-                                        proyecto_actualizado = actualizar_proyecto(pid, datos)
+                                        proyecto_actualizado = actualizar_proyecto(
+                                            pid, datos
+                                        )
                                     if proyecto_actualizado:
-                                        print("[bold green]Proyecto actualizado correctamente[/bold green]")
+                                        print(
+                                            "[bold green]Proyecto actualizado correctamente[/bold green]"
+                                        )
 
         elif accion == "Crear nuevo proyecto":
             datos = formulario_proyecto()
@@ -122,7 +133,9 @@ def menu():
             datos = formulario_proyecto(proyecto_a_editar)
             if datos:
                 with spinner(f"Actualizando proyecto {proyecto_a_editar.id}..."):
-                    proyecto_actualizado = actualizar_proyecto(proyecto_a_editar.id, datos)
+                    proyecto_actualizado = actualizar_proyecto(
+                        proyecto_a_editar.id, datos
+                    )
                 if proyecto_actualizado:
                     print(
                         f"[bold green]Proyecto actualizado: {proyecto_actualizado.nombre_proyecto}[/bold green]"

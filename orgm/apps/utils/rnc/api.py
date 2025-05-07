@@ -2,11 +2,14 @@ import requests
 import os
 from orgm.stuff.header import get_headers_json
 
+
 def buscar_empresa_en_dgii(busqueda: str, activo: bool = True):
     RNC_URL = os.getenv("RNC_URL")
     """Busca clientes por nombre o RNC en la API."""
     if not RNC_URL:
-        print("Error: La URL de la API RNC no está configurada en las variables de entorno.")
+        print(
+            "Error: La URL de la API RNC no está configurada en las variables de entorno."
+        )
         return None
 
     headers = get_headers_json()
@@ -15,7 +18,7 @@ def buscar_empresa_en_dgii(busqueda: str, activo: bool = True):
 
     try:
         response = requests.get(url, json=payload, headers=headers, timeout=15)
-        response.raise_for_status() # Lanza excepción para códigos de error HTTP
+        response.raise_for_status()  # Lanza excepción para códigos de error HTTP
         data = response.json()
         return data
     except requests.exceptions.RequestException as e:
@@ -24,4 +27,3 @@ def buscar_empresa_en_dgii(busqueda: str, activo: bool = True):
     except Exception as e:
         print(f"Error inesperado al buscar RNC: {e}")
         return None
-

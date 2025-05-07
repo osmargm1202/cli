@@ -10,14 +10,13 @@ from orgm.stuff.spinner import spinner
 
 console = Console()
 
+
 def actualizar_proyecto(id_proyecto: int, proyecto_data: Dict) -> Optional[Proyecto]:
     """Actualiza un proyecto existente"""
     # Asegurar que las variables estén inicializadas
-    
+
     POSTGREST_URL, headers = initialize()
 
-    
-    
     try:
         # Verificar que el proyecto existe
         proyecto_existente = obtener_proyecto(id_proyecto)
@@ -41,7 +40,7 @@ def actualizar_proyecto(id_proyecto: int, proyecto_data: Dict) -> Optional[Proye
             f"{POSTGREST_URL}/proyecto?id=eq.{id_proyecto}",
             headers=update_headers,
             json=proyecto_data,
-            timeout=10
+            timeout=10,
         )
         response.raise_for_status()
 
@@ -57,7 +56,8 @@ def actualizar_proyecto(id_proyecto: int, proyecto_data: Dict) -> Optional[Proye
             f"[bold red]Error al actualizar proyecto {id_proyecto}: {e}[/bold red]"
         )
         return None
-    
+
+
 def definir_y_actualizar_proyecto(id_proyecto: int):
     """Modificar un proyecto existente"""
     with spinner(f"Obteniendo proyecto {id_proyecto}..."):

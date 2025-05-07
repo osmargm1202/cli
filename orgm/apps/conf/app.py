@@ -1,9 +1,7 @@
-
 import typer
 from orgm.apps.conf.check import check_urls
 from orgm.apps.conf.env_file import env_file
 from orgm.apps.conf.env_edit import env_edit
-from orgm.apps.conf.ayuda import mostrar_ayuda
 from orgm.apps.conf.ayuda import mostrar_ayuda
 from orgm.apps.conf.menu import menu
 
@@ -23,8 +21,9 @@ def ai_callback(ctx: typer.Context):
     """
     if ctx.invoked_subcommand is None:
         # Ejecutar el menú de IA
-        
+
         menu()
+
 
 if __name__ == "__main__":
     app()

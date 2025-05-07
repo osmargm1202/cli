@@ -7,17 +7,18 @@ from rich.table import Table
 console = Console()
 
 
-
 def obtener_proyectos() -> List[Proyecto]:
     """Obtiene todos los proyectos desde PostgREST"""
     # Asegurar que las variables estén inicializadas
     POSTGREST_URL, headers = initialize()
-    
+
     import requests
     from orgm.apps.adm.db import Proyecto
-    
+
     try:
-        response = requests.get(f"{POSTGREST_URL}/proyecto", headers=headers, timeout=10)
+        response = requests.get(
+            f"{POSTGREST_URL}/proyecto", headers=headers, timeout=10
+        )
         response.raise_for_status()
 
         proyectos_data = response.json()
@@ -26,7 +27,7 @@ def obtener_proyectos() -> List[Proyecto]:
     except Exception as e:
         console.print(f"[bold red]Error al obtener proyectos: {e}[/bold red]")
         return []
-    
+
 
 def mostrar_proyectos(proyectos):
     """Muestra una tabla con los proyectos"""
@@ -54,5 +55,3 @@ def listar_proyectos():
     """Lista todos los proyectos"""
     proyectos = obtener_proyectos()
     mostrar_proyectos(proyectos)
-
-

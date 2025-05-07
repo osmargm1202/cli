@@ -1,8 +1,5 @@
 import typer
-import questionary
-from typing import Dict, Optional
 from rich.console import Console
-from rich.table import Table
 from rich import print
 from orgm.adm.proyectos import (
     obtener_proyectos,
@@ -11,10 +8,7 @@ from orgm.adm.proyectos import (
     actualizar_proyecto,
     eliminar_proyecto,
     buscar_proyectos,
-    obtener_ubicaciones,
-    buscar_ubicaciones,
 )
-from orgm.apps.adm.db import Proyecto
 from orgm.stuff.spinner import spinner
 
 console = Console()
@@ -23,20 +17,12 @@ console = Console()
 app = typer.Typer(help="Gestión de proyectos")
 
 
-
-
-
-
-
-
 # Comando principal para el menú interactivo
 @app.callback(invoke_without_command=True)
 def main(ctx: typer.Context):
     """Gestión de proyectos"""
     if ctx.invoked_subcommand is None:
         menu_principal()
-
-
 
 
 @app.command("list")
@@ -106,9 +92,6 @@ def cmd_eliminar_proyecto(id_proyecto: int):
         with spinner(f"Eliminando proyecto {id_proyecto}..."):
             if eliminar_proyecto(id_proyecto):
                 print("[bold green]Proyecto eliminado correctamente[/bold green]")
-
-
-
 
 
 @app.command("show")

@@ -9,19 +9,16 @@ from orgm.stuff.spinner import spinner
 console = Console()
 
 
-
-
 def crear_proyecto(proyecto_data: Dict) -> Optional[Proyecto]:
     """Crea un nuevo proyecto"""
     # Asegurar que las variables estén inicializadas
-    
+
     POSTGREST_URL, headers = initialize()
-    
 
     import requests
     from orgm.apps.adm.db import Proyecto
     from orgm.apps.ai.generate import generate_text
-    
+
     try:
         # Validar datos mínimos requeridos
         if not proyecto_data.get("nombre_proyecto"):
@@ -33,12 +30,11 @@ def crear_proyecto(proyecto_data: Dict) -> Optional[Proyecto]:
         # Si la descripción está vacía, generarla automáticamente
         if not proyecto_data.get("descripcion"):
             descripcion = generate_text(
-                proyecto_data.get("nombre_proyecto"),
-                "descripcion_electromecanica"
+                proyecto_data.get("nombre_proyecto"), "descripcion_electromecanica"
             )
             if descripcion:
                 proyecto_data["descripcion"] = descripcion
-                
+
         # Asignar ID si no está definido
         if "id" not in proyecto_data:
             proyecto_data["id"] = obtener_id_maximo()
@@ -56,7 +52,7 @@ def crear_proyecto(proyecto_data: Dict) -> Optional[Proyecto]:
     except Exception as e:
         console.print(f"[bold red]Error al crear proyecto: {e}[/bold red]")
         return None
-    
+
 
 def definir_y_crear_proyecto():
     """Crear un nuevo proyecto"""

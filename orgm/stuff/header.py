@@ -1,13 +1,8 @@
-
 import os
 
 
 def get_headers_json():
-
-    headers = {
-        "Content-Type": "application/json",
-        "Accept": "application/json"
-    }
+    headers = {"Content-Type": "application/json", "Accept": "application/json"}
 
     CF_ACCESS_CLIENT_ID = os.getenv("CF_ACCESS_CLIENT_ID")
     CF_ACCESS_CLIENT_SECRET = os.getenv("CF_ACCESS_CLIENT_SECRET")

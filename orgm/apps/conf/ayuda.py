@@ -3,6 +3,7 @@ from rich.console import Console
 
 console = Console()
 
+
 def mostrar_ayuda():
     """Muestra el contenido del archivo comandos.md"""
     try:
@@ -10,7 +11,6 @@ def mostrar_ayuda():
         script_dir = Path(__file__).parent.parent.parent
         comandos_path = script_dir / "comandos.md"
 
-        
         # Leer y mostrar el archivo
         with open(comandos_path, "r", encoding="utf-8") as f:
             contenido = f.read()
@@ -20,4 +20,4 @@ def mostrar_ayuda():
 
 
 if __name__ == "__main__":
-    mostrar_ayuda() 
+    mostrar_ayuda()

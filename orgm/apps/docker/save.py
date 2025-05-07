@@ -5,6 +5,7 @@ from rich.console import Console
 
 console = Console()
 
+
 def save():
     """Guarda la imagen Docker en un archivo tar."""
     load_local_env()
@@ -21,7 +22,9 @@ def save():
 
     tag = os.getenv("DOCKER_IMAGE_TAG")
     image = f"{os.getenv('DOCKER_USER')}/{os.getenv('DOCKER_IMAGE_NAME')}:{tag}"
-    save_path = os.path.join(os.getenv("DOCKER_FOLDER_SAVE"), os.getenv("DOCKER_SAVE_FILE"))
+    save_path = os.path.join(
+        os.getenv("DOCKER_FOLDER_SAVE"), os.getenv("DOCKER_SAVE_FILE")
+    )
 
     console.print(f"[bold green]Guardando imagen en:[/bold green] {save_path}")
     os.makedirs(os.path.dirname(save_path), exist_ok=True)

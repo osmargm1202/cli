@@ -1,11 +1,9 @@
 import json
 from typing import Tuple
-import typer
-from rich import box
 from rich.console import Console
-from orgm.stuff.spinner import spinner
 
 console = Console()
+
 
 def exportar_cliente(cliente, formato: str) -> Tuple[bool, str]:
     """
@@ -34,10 +32,12 @@ def exportar_cliente(cliente, formato: str) -> Tuple[bool, str]:
                 )
             else:
                 # Fallback genérico para otros tipos serializables
-                 # Intentar convertir a dict si tiene __dict__ o similar? O simplemente usar str?
-                 # Por seguridad, intentar volcar directamente puede ser mejor
-                 # Añadir default=str aquí también
-                 contenido_json = json.dumps(cliente, indent=4, default=str, ensure_ascii=False)
+                # Intentar convertir a dict si tiene __dict__ o similar? O simplemente usar str?
+                # Por seguridad, intentar volcar directamente puede ser mejor
+                # Añadir default=str aquí también
+                contenido_json = json.dumps(
+                    cliente, indent=4, default=str, ensure_ascii=False
+                )
 
             return True, contenido_json
         except TypeError as e:
@@ -46,7 +46,7 @@ def exportar_cliente(cliente, formato: str) -> Tuple[bool, str]:
             return False, f"Error inesperado durante la exportación a JSON: {e}"
     else:
         return False, f"Formato de exportación no soportado: {formato}"
-    
+
 
 def formatear_cliente_json(cliente) -> str:
     """
@@ -64,4 +64,3 @@ def formatear_cliente_json(cliente) -> str:
     else:
         # Devolver un JSON indicando el error
         return json.dumps({"error": contenido}, indent=4, ensure_ascii=False)
-    

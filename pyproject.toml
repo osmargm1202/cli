@@ -1,6 +1,6 @@
 [project]
 name = "orgm"
-version = "0.125"
+version = "0.128"
 description = "ORGM CLI for managing projects and tasks"
 readme = "README.md"
 authors = [{name = "Osmar Garcia"}]
@@ -11,12 +11,17 @@ classifiers = [
 dependencies = [
     "asciimatics>=1.15.0",
     "click-repl>=0.3.0",
-    "click-shell>=2.1",
+    "docx-mailmerge>=0.5.0",
+    "docxcompose>=1.4.0",
+    "docxtpl>=0.20.0",
     "kivy>=2.3.1",
     "nicegui>=2.15.0",
+    "pypdf2>=3.0.1",
     "pyperclip>=1.9.0",
+    "python-docx>=1.1.2",
     "python-dotenv>=1.0.1",
     "questionary>=2.1.0",
+    "reportlab>=4.4.0",
     "requests>=2.32.3",
     "rich>=13.9.4",
     "setuptools>=75.3.2",

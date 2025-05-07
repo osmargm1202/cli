@@ -3,8 +3,6 @@ from rich.console import Console
 from typing import Dict, Optional
 from orgm.apps.adm.db import Cliente
 from orgm.apps.adm.cliente.get_client import obtener_cliente
-from orgm.apps.adm.cliente.form_client import formulario_cliente
-import questionary
 import typer
 from orgm.stuff.spinner import spinner
 from orgm.apps.adm.cliente.tipos import TipoFactura
@@ -13,15 +11,14 @@ from orgm.apps.adm.cliente.get_clients import mostrar_tabla_clientes
 console = Console()
 
 
-
 def actualizar_cliente(id_cliente: int, cliente_data: Dict) -> Optional[Cliente]:
     """Actualiza un cliente existente"""
     # Asegurar que las variables estén inicializadas
     POSTGREST_URL, headers = initialize()
-    
+
     import requests
     from orgm.apps.adm.db import Cliente
-    
+
     try:
         # Verificar que el cliente existe
         cliente_existente = obtener_cliente(id_cliente)
@@ -35,7 +32,7 @@ def actualizar_cliente(id_cliente: int, cliente_data: Dict) -> Optional[Cliente]
             f"{POSTGREST_URL}/cliente?id=eq.{id_cliente}",
             headers=update_headers,
             json=cliente_data,
-            timeout=10
+            timeout=10,
         )
         response.raise_for_status()
 
@@ -49,7 +46,8 @@ def actualizar_cliente(id_cliente: int, cliente_data: Dict) -> Optional[Cliente]
             f"[bold red]Error al actualizar cliente {id_cliente}: {e}[/bold red]"
         )
         return None
-    
+
+
 def actualizar(
     id: int,
     nombre: Optional[str] = typer.Option(None, help="Nuevo nombre del cliente"),
@@ -60,12 +58,24 @@ def actualizar(
     ciudad: Optional[str] = typer.Option(None, help="Nueva ciudad"),
     provincia: Optional[str] = typer.Option(None, help="Nueva provincia"),
     telefono: Optional[str] = typer.Option(None, help="Nuevo teléfono del cliente"),
-    representante: Optional[str] = typer.Option(None, help="Nuevo nombre del representante"),
-    telefono_representante: Optional[str] = typer.Option(None, help="Nuevo teléfono del representante"),
-    extension_representante: Optional[str] = typer.Option(None, help="Nueva extensión del representante"),
-    celular_representante: Optional[str] = typer.Option(None, help="Nuevo celular del representante"),
-    correo_representante: Optional[str] = typer.Option(None, help="Nuevo correo del representante"),
-    tipo_factura: Optional[TipoFactura] = typer.Option(None, help="Nuevo tipo de factura")
+    representante: Optional[str] = typer.Option(
+        None, help="Nuevo nombre del representante"
+    ),
+    telefono_representante: Optional[str] = typer.Option(
+        None, help="Nuevo teléfono del representante"
+    ),
+    extension_representante: Optional[str] = typer.Option(
+        None, help="Nueva extensión del representante"
+    ),
+    celular_representante: Optional[str] = typer.Option(
+        None, help="Nuevo celular del representante"
+    ),
+    correo_representante: Optional[str] = typer.Option(
+        None, help="Nuevo correo del representante"
+    ),
+    tipo_factura: Optional[TipoFactura] = typer.Option(
+        None, help="Nuevo tipo de factura"
+    ),
 ):
     """Comando para actualizar un cliente existente."""
     with spinner(f"Verificando cliente {id}..."):
@@ -113,12 +123,16 @@ def actualizar(
         cliente_actualizado_dict = actualizar_cliente(id, datos_actualizacion)
 
     if cliente_actualizado_dict:
-        console.print(f"[bold green]Cliente actualizado con éxito.[/bold green]")
+        console.print("[bold green]Cliente actualizado con éxito.[/bold green]")
         with spinner(f"Obteniendo datos actualizados del cliente {id}..."):
             cliente_obj = obtener_cliente(id)
         if cliente_obj:
             mostrar_tabla_clientes([cliente_obj])
         else:
-            console.print("[yellow]No se pudo recuperar el cliente actualizado para mostrarlo.[/yellow]")
+            console.print(
+                "[yellow]No se pudo recuperar el cliente actualizado para mostrarlo.[/yellow]"
+            )
     else:
-        console.print("[bold red]Error al actualizar el cliente (la API no devolvió datos).[/bold red]")
+        console.print(
+            "[bold red]Error al actualizar el cliente (la API no devolvió datos).[/bold red]"
+        )

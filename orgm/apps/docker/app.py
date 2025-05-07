@@ -1,4 +1,3 @@
-
 import typer
 
 
@@ -27,7 +26,6 @@ app.command(name="remove-prod-context")(remove_prod_context)
 app.command(name="login")(login)
 
 
-
 @app.callback(invoke_without_command=True)
 def ai_callback(ctx: typer.Context):
     """
@@ -35,8 +33,9 @@ def ai_callback(ctx: typer.Context):
     """
     if ctx.invoked_subcommand is None:
         # Ejecutar el menú de IA
-        
+
         menu()
+
 
 if __name__ == "__main__":
     app()

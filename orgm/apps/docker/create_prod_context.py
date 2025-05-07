@@ -5,6 +5,7 @@ from rich.console import Console
 
 console = Console()
 
+
 def create_prod_context():
     """Crea un contexto Docker denominado 'prod'."""
     load_local_env()

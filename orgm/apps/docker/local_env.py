@@ -1,4 +1,3 @@
-
 from dotenv import load_dotenv
 import os
 import typer
@@ -14,8 +13,11 @@ def load_local_env() -> None:
     if os.path.isfile(dotenv_path):
         load_dotenv(dotenv_path=dotenv_path, override=True)
     else:
-        console.print("[bold red]Error: .env file not found en el directorio actual[/bold red]")
+        console.print(
+            "[bold red]Error: .env file not found en el directorio actual[/bold red]"
+        )
         raise typer.Exit(1)
+
 
 def require_vars(varnames: List[str]):
     """Verifica que todas las variables de entorno indicadas estén definidas."""

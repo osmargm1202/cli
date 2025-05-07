@@ -5,7 +5,10 @@ from orgm.stuff.jsoneditor import JsonEditor
 
 console = Console()
 
-def json_edit(json_file_path: Optional[str] = None, initial_content: Optional[str] = None) -> Any:
+
+def json_edit(
+    json_file_path: Optional[str] = None, initial_content: Optional[str] = None
+) -> Any:
     """Abre el editor Textual para el archivo .json.
 
     Args:
@@ -22,7 +25,7 @@ def json_edit(json_file_path: Optional[str] = None, initial_content: Optional[st
         app = JsonEditor(file_path=target_path_str, initial_content=initial_content)
         result = app.run()
         # El resultado puede ser "Guardado" o "Cancelado" o None si hay error interno
-        return result # Retornar directamente el mensaje de salida de app.run()
+        return result  # Retornar directamente el mensaje de salida de app.run()
     except Exception as e:
         console.print(f"[bold red]Error al iniciar el editor de .json:[/bold red] {e}")
-        return None # Retornar None en caso de excepción
+        return None  # Retornar None en caso de excepción
