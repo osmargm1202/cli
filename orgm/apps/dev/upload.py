@@ -6,52 +6,6 @@ from pathlib import Path  # Importar Path para manejar archivos
 console = Console()
 
 
-def _increment_version():
-    """Lee pyproject.toml, incrementa la versión patch y escribe el archivo."""
-    pyproject_path = Path("pyproject.toml")
-    try:
-        content = pyproject_path.read_text()
-        version_match = re.search(
-            r'version\s*=\s*"(\d+)\.(\d+)\.(\d+)"', content, re.MULTILINE
-        )
-        if not version_match:
-            console.print(
-                "[bold red]Error: No se pudo encontrar la línea de versión en pyproject.toml[/bold red]"
-            )
-            return False
-
-        major, minor, patch = map(int, version_match.groups())
-        new_patch = patch + 1
-        current_version = f"{major}.{minor}.{patch}"
-        new_version = f"{major}.{minor}.{new_patch}"
-
-        console.print(
-            f"Actualizando versión de {current_version} a {new_version} en {pyproject_path}..."
-        )
-
-        new_content = re.sub(
-            r'^version\s*=\s*".*?"',
-            f'version = "{new_version}"',
-            content,
-            count=1,
-            flags=re.MULTILINE,
-        )
-
-        pyproject_path.write_text(new_content)
-        console.print(
-            f"[green]Versión actualizada a {new_version} en {pyproject_path}[/green]"
-        )
-        return True
-    except FileNotFoundError:
-        console.print(
-            f"[bold red]Error: No se encontró el archivo {pyproject_path}[/bold red]"
-        )
-        return False
-    except Exception as e:
-        console.print(f"[bold red]Error al actualizar la versión: {e}[/bold red]")
-        return False
-
-
 def upload() -> None:
     """Construye y sube el paquete ORGM CLI a PyPI, luego incrementa la versión."""
     console.print("Iniciando el proceso de construcción y subida del paquete...")
@@ -121,11 +75,3 @@ def upload() -> None:
 
     console.print("[bold blue]Proceso de construcción y subida completado.[/bold blue]")
 
-    # Incrementar versión solo si todo lo anterior tuvo éxito
-    console.print("\nIntentando incrementar la versión del paquete...")
-    if _increment_version():
-        console.print("[bold green]Versión incrementada con éxito.[/bold green]")
-    else:
-        console.print(
-            "[bold yellow]No se pudo incrementar la versión automáticamente.[/bold yellow]"
-        )
