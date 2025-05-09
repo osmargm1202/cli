@@ -5,6 +5,7 @@ import typer
 from pathlib import Path
 from dotenv import load_dotenv
 from rich.console import Console
+import os
 import questionary
 from pyfiglet import Figlet  # Importar Figlet
 from click_repl import register_repl
@@ -19,6 +20,7 @@ from orgm.apps.adm.proyecto.app import app as proyecto_app
 from orgm.apps.adm.cotizacion.app import app as cotizacion_app
 from orgm.menu import menu_principal
 from orgm.apps.utils.docs.app import app as docs_app
+from orgm.apps.utils.carpetas.app import app as carpeta_app
 
 console = Console()
 
@@ -43,7 +45,7 @@ class OrgmCLI:
         self.app.add_typer(proyecto_app, name="project")
         self.app.add_typer(cotizacion_app, name="quotation")
         self.app.add_typer(docs_app, name="docs")
-
+        self.app.add_typer(carpeta_app, name="carpeta")
         # --- Comando de menú ---
         @self.app.command(name="menu", help="Muestra el menú interactivo principal.")
         def menu_command(ctx_menu: typer.Context): # ctx_menu es el contexto de este comando 'menu'
@@ -160,7 +162,10 @@ class OrgmCLI:
         # Find .env file relative to the main script or project root
         # This assumes orgm.py is in the 'orgm' directory
         project_root = Path(__file__).parent.parent
-        dotenv_path = project_root / ".env"
+        # Definir la ruta del archivo .env según el sistema operativo
+
+        orgm_env = os.path.join(os.path.expanduser("~"), ".orgm", ".env")
+        dotenv_path = project_root / ".env" / orgm_env
         if dotenv_path.exists():
             load_dotenv(dotenv_path=dotenv_path, override=True)
         else:
@@ -189,8 +194,7 @@ class OrgmCLI:
 
 # Inicializar y ejecutar la CLI
 def main():
-    # --- Mostrar título con pyfiglet ---
-    f = Figlet(
+    # ---1iglet(
         font="ghost"
     )  # Puedes probar otras fuentes como 'standard', 'big', 'digital'
     ascii_art = f.renderText("ORGM")
