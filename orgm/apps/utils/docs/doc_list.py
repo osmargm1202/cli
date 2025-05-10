@@ -1,21 +1,14 @@
-from reportlab.lib.pagesizes import A4, LETTER
-from reportlab.lib import colors
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-from reportlab.lib.enums import TA_CENTER
-from reportlab.lib.units import mm
-from reportlab.lib.colors import HexColor
+
 from orgm.apps.utils.docs.leer_csv import leer_csv
 import sys
 import os
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
+
 
 from rich.console import Console
 
 console = Console()
 
-pdfmetrics.registerFont(TTFont('Roboto', '/usr/share/fonts/TTF/Roboto-Regular.ttf'))
+# pdfmetrics.registerFont(TTFont('Roboto', '/usr/share/fonts/TTF/Roboto-Regular.ttf'))
 
 def dividir_texto(texto, max_caracteres=30):
     palabras = texto.split()

@@ -77,6 +77,7 @@ def menu():
     
     opciones = [
         "Cargar documentos faltantes",
+        "Reemplazar documentos existentes",
         "Imprimir lista de memorias",
         "Mostrar documentos faltantes",
         "Mostrar documentos existentes",
@@ -118,7 +119,7 @@ def menu():
                         generar_portadas(datos, temp_dir=directorio, output_dir=directorio)
             except Exception as e:
                 console.print(f"Error: {e}", style="bold red")
-
+            return menu()
     elif respuesta == "Mostrar documentos faltantes":
         archivo_base = obtener_archivo_base(ultimo_directorio)
         
@@ -215,6 +216,91 @@ def menu():
                 console.print(f"Error: {e}", style="bold red")
         return menu()
 
+    elif respuesta == "Reemplazar documentos existentes":
+        archivo_base = obtener_archivo_base(ultimo_directorio)
+        
+        if archivo_base:
+            if ultimo_directorio != os.path.dirname(archivo_base):
+                guardar_ultimo_directorio(os.path.dirname(archivo_base))
+            try:
+                directorio = os.path.dirname(archivo_base)
+                datos = leer_csv(archivo_base)
+                if datos:
+                    datos, temp_dir, output_dir = directorios(datos, temp_dir=directorio, output_dir=directorio)
+                    documentos_existentes = mostrar_documentos_existentes(datos, ruta_html=directorio, solo_datos=True)
+                    
+                    if documentos_existentes:
+                        # Organizar por disciplina para la selección
+                        documentos_por_disciplina = {}
+                        for i, doc in enumerate(documentos_existentes):
+                            disciplina = doc.get('disciplina', 'SIN DISCIPLINA')
+                            if disciplina not in documentos_por_disciplina:
+                                documentos_por_disciplina[disciplina] = []
+                            documentos_por_disciplina[disciplina].append((i, doc))
+                        
+                        # Crear lista de opciones para seleccionar documento, agrupadas por disciplina
+                        opciones_documentos = []
+                        for disciplina, docs in sorted(documentos_por_disciplina.items()):
+                            # Agregar encabezado de disciplina como opción deshabilitada (no seleccionable)
+                            opciones_documentos.append(questionary.Separator(f"-- {disciplina} --"))
+                            
+                            # Agregar documentos de esta disciplina
+                            for i, doc in docs:
+                                opciones_documentos.append(
+                                    f"{i+1}. {doc.get('codigo', '')} - {doc.get('nombre', '')} ({doc.get('disciplina', '')})"
+                                )
+                        
+                        documento_seleccionado = questionary.select(
+                            "Seleccione el documento a reemplazar:",
+                            choices=opciones_documentos,
+                            style=custom_style_fancy
+                        ).ask()
+                        
+                        if documento_seleccionado and not documento_seleccionado.startswith("--"):
+                            # Obtener índice del documento seleccionado
+                            indice = int(documento_seleccionado.split('.')[0]) - 1
+                            
+                            # Solicitar ruta del archivo a copiar
+                            ruta_archivo = questionary.path(
+                                "Ingrese la ruta del archivo de reemplazo:",
+                                style=custom_style_fancy
+                            ).ask()
+                            
+                            # Confirmar reemplazo
+                            confirmar = questionary.confirm(
+                                f"¿Está seguro de reemplazar el documento '{documentos_existentes[indice].get('nombre', '')}'?",
+                                style=custom_style_fancy
+                            ).ask()
+                            
+                            if confirmar:
+                                # Copiar archivo (reemplazar)
+                                copiar_documento(documentos_existentes, indice, ruta_archivo, reemplazar=True)
+                                console.print("Documento reemplazado exitosamente.", style="bold green")
+
+                                # Preguntar si desea reimprimir el documento
+                                reimprimir = questionary.confirm(
+                                    "¿Desea reimprimir el documento con la portada?",
+                                    style=custom_style_fancy
+                                ).ask()
+                                
+                                if reimprimir:
+                                    try:
+                                        # Obtener el documento seleccionado
+                                        documento = documentos_existentes[indice]
+                                        # Imprimir el documento con su portada
+                                        imprimir_docx(documento)
+                                        console.print("Documento reimpreso exitosamente.", style="bold green")
+                                    except Exception as e:
+                                        console.print(f"Error al reimprimir el documento: {e}", style="bold red")
+                                
+                    else:
+                        console.print("No hay documentos existentes para reemplazar.", style="bold yellow")
+                else:
+                    console.print("No se encontraron datos en el CSV.", style="bold red")
+            except Exception as e:
+                console.print(f"Error: {e}", style="bold red")
+        return menu()
+
     elif respuesta == "Imprimir lista de memorias":
         
         archivo_base = obtener_archivo_base(ultimo_directorio)
@@ -240,6 +326,8 @@ def menu():
                     else:
                         # Solo generar la tabla normal
                         generar_tabla_planos(datos, archivo_salida=f"{ultimo_directorio}/lista_documentos.pdf")
+
+                    return menu()
                 else:
                     console.print("No se encontraron datos en el CSV.", style="bold red")
             except Exception as e:
@@ -274,8 +362,11 @@ def menu():
                     
                     # Copiar los entregables
                     copiar_entregables(datos, ruta_destino)
+                    console.print("Entregables copiados exitosamente.", style="bold green")
+                    
                 else:
                     console.print("No se encontraron datos en el CSV.", style="bold red")
+                return menu()
             except Exception as e:
                 console.print(f"Error: {e}", style="bold red")
         return menu()
@@ -293,7 +384,7 @@ def menu():
                     datos, temp_dir, output_dir = directorios(datos, temp_dir=directorio, output_dir=directorio)
                     # Crear lista de opciones con "Todos" como primera opción
                     opciones_codigos = ["Todos"]
-                    opciones_codigos.extend([dato['codigo'] for dato in datos])
+                    opciones_codigos.extend([f"{dato['codigo']} - {dato['nombre']}" for dato in datos])
                     
                     # Preguntar al usuario qué documento procesar
                     codigos_seleccionados = questionary.checkbox(
@@ -309,16 +400,16 @@ def menu():
                         for dato in datos:
                             imprimir_docx(dato)
                     elif codigos_seleccionados:
-                        print(codigos_seleccionados)
                         for dato in datos:
                             if dato['codigo'] in codigos_seleccionados:
                                 imprimir_docx(dato)
                     else:
                         return 'exit'
-
+                    
 
             except Exception as e:
                 console.print(f"Error: {e}", style="bold red")
+        return menu()
     else:
         return 'exit'
         

@@ -101,7 +101,16 @@ def mostrar_cotizacion_detalle(cotizacion):
     table.add_column("Valor", style="green")
 
     for k, v in data.items():
-        table.add_row(str(k), str(v))
+        if k == 'id_cliente':
+            table.add_row(str(k), f"{v} - {data['cliente']['nombre']}")
+        elif k == 'id_proyecto':
+            table.add_row(str(k), f"{v} - {data['proyecto']['nombre_proyecto']}")
+        elif k == 'id_servicio':
+            table.add_row(str(k), f"{v} - {data['servicio']['nombre']} - {data['servicio']['descripcion']}")
+        elif k in ['cliente', 'proyecto', 'servicio']:
+            continue
+        else:
+            table.add_row(str(k), str(v))
 
     console.print(table)
 

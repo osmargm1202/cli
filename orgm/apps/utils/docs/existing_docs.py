@@ -42,13 +42,14 @@ def existing_documents(datos):
 
 
 
-def mostrar_documentos_existentes(datos, ruta_html: str):
+def mostrar_documentos_existentes(datos, ruta_html: str, solo_datos: bool = False):
     """
     Muestra una tabla con los documentos que ya tienen archivos en las carpetas.
     
     Args:
         datos (list): Lista de diccionarios con los datos de los documentos
         ruta_html (str): Ruta donde guardar el archivo HTML con el reporte
+        solo_datos (bool): Si es True, solo devuelve los datos sin mostrar la tabla
     
     Returns:
         list: Lista de documentos existentes
@@ -56,8 +57,12 @@ def mostrar_documentos_existentes(datos, ruta_html: str):
     documentos_existentes = existing_documents(datos)
     
     if not documentos_existentes:
-        console.print("No se encontraron documentos con archivos en las carpetas", style="bold red")
+        if not solo_datos:
+            console.print("No se encontraron documentos con archivos en las carpetas", style="bold red")
         return []
+    
+    if solo_datos:
+        return documentos_existentes
     
     # Organizar documentos por disciplina
     documentos_por_disciplina = {}

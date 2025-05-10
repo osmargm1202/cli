@@ -9,11 +9,11 @@ from orgm.apps.adm.cotizacion.gui import gui
 console = Console()
 
 # Crear aplicación Typer para comandos de IA
-app = typer.Typer(help="Comandos para interactuar con datos de clientes")
+app = typer.Typer(help="Comandos para interactuar con datos de cotizaciones")
 
 # Registrar ai_prompt directamente con el nombre 'prompt'
 # El docstring de ai_prompt se usará como ayuda
-app.command(name="list")(listar_cotizaciones)
+# app.command(name="list")(listar_cotizaciones)
 # app.command(name="show")(mostrar_cotizacion_detalle)
 # app.command(name="find")(buscar_cotizaciones_por_cliente)
 # app.command(name="create")(crear_cotizacion)

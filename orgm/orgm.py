@@ -41,10 +41,10 @@ class OrgmCLI:
         self.app.add_typer(dev_app, name="dev")
         self.app.add_typer(docker_app, name="docker")
         self.app.add_typer(rnc_app, name="rnc")
-        self.app.add_typer(cliente_app, name="client")
-        self.app.add_typer(proyecto_app, name="project")
-        self.app.add_typer(cotizacion_app, name="quotation")
-        self.app.add_typer(docs_app, name="docs")
+        self.app.add_typer(cliente_app, name="cliente")
+        self.app.add_typer(proyecto_app, name="proyecto")
+        self.app.add_typer(cotizacion_app, name="cotizacion")
+        self.app.add_typer(docs_app, name="documento")
         self.app.add_typer(carpeta_app, name="carpeta")
         # --- Comando de menú ---
         @self.app.command(name="menu", help="Muestra el menú interactivo principal.")
@@ -194,7 +194,8 @@ class OrgmCLI:
 
 # Inicializar y ejecutar la CLI
 def main():
-    # ---1iglet(
+    # --- Mostrar título con pyfiglet ---
+    f = Figlet(
         font="ghost"
     )  # Puedes probar otras fuentes como 'standard', 'big', 'digital'
     ascii_art = f.renderText("ORGM")

@@ -21,8 +21,9 @@ def obtener_cotizacion(id_cotizacion: int) -> Optional[dict]:
     import requests
 
     try:
+        query = f"?select=*,cliente(id,nombre),proyecto(id,nombre_proyecto),servicio(id,nombre,descripcion)&id=eq.{id_cotizacion}"
         response = requests.get(
-            f"{POSTGREST_URL}/cotizacion?id=eq.{id_cotizacion}", headers=headers
+            f"{POSTGREST_URL}/cotizacion{query}", headers=headers
         )
         response.raise_for_status()
         result = response.json()

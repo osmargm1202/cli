@@ -1,7 +1,9 @@
 import os
 from typing import Optional
 from rich.console import Console
-
+from orgm.stuff.header import get_headers_json
+import requests
+from orgm.stuff.initialize_api import initialize
 # Moved console initialization to the top level as it's generally safe
 # and used by multiple functions potentially.
 console = Console()
@@ -14,33 +16,10 @@ console = Console()
 
 
 def generate_text(text: str, config_name: str) -> Optional[str]:
-    """Llama al endpoint de IA para generar un contenido basado en el parámetro *text* y la configuración *config_name*.
-
-    Args:
-        text: Texto de entrada que describe el contexto o prompt.
-        config_name: Nombre de la configuración del modelo / plantilla que la API debe aplicar.
-
-    Returns:
-        Cadena con el resultado enviado por la API o ``None`` si ocurre un error.
-    """
-    # Import necessary modules inside the function
-    import requests
-    from orgm.apis.header import get_headers_json
+    """Llama al endpoint de IA para generar un contenido basado en el parámetro *text* y la configuración *config_name*."""
 
     # Get API_URL from environment variables inside the function
-    API_URL = os.getenv("API_URL")
-
-    if not API_URL:
-        console.print(
-            "[bold yellow]Advertencia: API_URL no está definida en las variables de entorno.[/bold yellow]"
-        )
-        console.print(
-            "[bold yellow]La generación automática de descripciones no estará disponible.[/bold yellow]"
-        )
-        return None
-
-    # Get headers using the dedicated function
-    headers = get_headers_json()
+    API_URL, headers = initialize()
 
     request_data = {"text": text, "config_name": config_name}
 

@@ -4,7 +4,7 @@ from rich.console import Console
 
 console = Console()
 
-def copiar_documento(datos, indice_documento, ruta_archivo):
+def copiar_documento(datos, indice_documento, ruta_archivo, reemplazar=False):
     """
     Copia un archivo a la carpeta correspondiente (PDF o DOCX) y lo renombra.
     
@@ -12,6 +12,7 @@ def copiar_documento(datos, indice_documento, ruta_archivo):
         datos (list): Lista de diccionarios con los datos de los documentos
         indice_documento (int): Índice del documento en la lista
         ruta_archivo (str): Ruta del archivo a copiar
+        reemplazar (bool): Si es True, reemplazará el archivo si existe
         
     Returns:
         bool: True si se copió correctamente, False en caso contrario
@@ -47,10 +48,21 @@ def copiar_documento(datos, indice_documento, ruta_archivo):
         # Ruta completa del archivo destino
         ruta_destino = os.path.join(carpeta_destino, nombre_destino)
         
-        # Copiar archivo
+        # Verificar si el archivo existe y si no estamos reemplazando
+        if os.path.exists(ruta_destino) and not reemplazar:
+            console.print(f"El archivo ya existe en: {ruta_destino}", style="bold red")
+            confirmar = input(f"¿Desea reemplazarlo? (s/n): ").lower()
+            if confirmar != 's':
+                console.print("Operación cancelada", style="bold yellow")
+                return False
+        
+        # Copiar archivo (reemplazándolo si existe)
         shutil.copy2(ruta_archivo, ruta_destino)
         
-        console.print(f"Archivo copiado a: {ruta_destino}", style="bold green")
+        if reemplazar and os.path.exists(ruta_destino):
+            console.print(f"Archivo reemplazado exitosamente en: {ruta_destino}", style="bold green")
+        else:
+            console.print(f"Archivo copiado a: {ruta_destino}", style="bold green")
         return True
         
     except Exception as e:

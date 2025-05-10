@@ -130,7 +130,7 @@ def buscar_cotizaciones(cliente_id: int) -> Optional[Dict]:
     try:
         # Realizar solicitud GET filtrando por cliente_id
         response = requests.get(
-            f"{postgrest_url}/cotizacion?select=id,fecha,servicio(id,nombre),proyecto(id,nombre_proyecto)&id_cliente=eq.{cliente_id}",
+            f"{postgrest_url}/cotizacion?select=id,fecha,servicio(id,nombre),proyecto(id,nombre_proyecto)&id_cliente=eq.{cliente_id}&order=id.desc",
             headers=headers
         )
 
