@@ -45,7 +45,12 @@ def menu():
             sys.exit(0)
 
         op = mapping[choice_name]
-        if op == "build":
+        
+        if op == "login":
+            from orgm.apps.docker.login import login
+            login()
+
+        elif op == "build":
             from orgm.apps.docker.build import build
 
             build()
@@ -56,31 +61,29 @@ def menu():
         elif op == "save":
             from orgm.apps.docker.save import save
 
-            save()
-        elif op == "push":
-            from orgm.apps.docker.push import push
-
             push()
         elif op == "tag":
             from orgm.apps.docker.tag import tag
 
+            save()
+        elif op == "push":
+            from orgm.apps.docker.push import push
+
             tag()
         elif op == "create_prod_context":
             from orgm.apps.docker.create_prod_context import create_prod_context
-
             create_prod_context()
-        elif op == "deploy":
-            from orgm.apps.docker.deploy import deploy
 
-            deploy()
+
         elif op == "remove_prod_context":
             from orgm.apps.docker.remove_prod_context import remove_prod_context
-
             remove_prod_context()
-        elif op == "login":
-            from orgm.apps.docker.login import login
 
-            login()
+        elif op == "deploy":
+            from orgm.apps.docker.deploy import deploy
+            deploy()
+
+
         elif op == "docker -h":
             subprocess.run(["orgm", "docker", "-h"])
             menu()
